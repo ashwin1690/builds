@@ -1,0 +1,770 @@
+{
+  "channel_name": "#data-questions",
+  "date_range": "2025-11-01 to 2026-01-31",
+  "summary": {
+    "total_threads_analyzed": 23,
+    "unique_assets_identified": 24,
+    "assets_with_questions": 24
+  },
+  "priority_assets": [
+    {
+      "name": "revenue_daily_v2",
+      "asset_type": "Table",
+      "priority_score": 10.0,
+      "demand_signals": {
+        "num_questions": 5,
+        "unique_questioners": 5,
+        "question_complexity": "High",
+        "common_question_types": [
+          "Access",
+          "Unknown",
+          "Usage",
+          "Definitional"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": "Adding to David's point - revenue_daily_v2 reconciles to our financial systems. Always use v2 for anything finance-related. The Finance Data team owns this table. | This gets asked weekly! finance.revenue_daily_v2 contains daily revenue aggregations including: gross_revenue, refunds, net_revenue, by product_line and region. It's the source of truth that reconciles to our GL. Finance Data team owns it. | See the thread from 2 weeks ago - it's our source of truth for revenue including refunds. The Finance Data team owns it. | ALWAYS use finance.revenue_daily_v2. This is the official source that reconciles to our financial systems. Ignore revenue_daily (deprecated) and any other revenue tables you might find.",
+        "gotchas": [],
+        "ownership": [
+          "The Finance Data Team",
+          "Finance Data Team"
+        ],
+        "related_terms": [
+          "Revenue"
+        ]
+      },
+      "sample_questions": [
+        "Can someone explain what the `revenue_daily` table contains vs `revenue_daily_v2`? I see both in the warehouse and not sure which one to use.",
+        "Can someone explain what revenue_daily_v2 is? Need it for a report.",
+        "Which revenue table should I use? I keep hearing different things."
+      ]
+    },
+    {
+      "name": "dim_customer",
+      "asset_type": "Table",
+      "priority_score": 10.0,
+      "demand_signals": {
+        "num_questions": 6,
+        "unique_questioners": 6,
+        "question_complexity": "High",
+        "common_question_types": [
+          "Ownership",
+          "Definitional",
+          "Lineage",
+          "Usage"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": null,
+        "gotchas": [],
+        "ownership": [
+          "jennifer",
+          "The Customer Data Platform Team",
+          "jennifer.lee"
+        ],
+        "related_terms": [
+          "Subscription",
+          "Customer",
+          "Order"
+        ]
+      },
+      "sample_questions": [
+        "Where does the data in the customer_360 dashboard come from? I need to understand the underlying tables for my analysis.",
+        "Who owns the customers.dim_customer table? I need to request a new column.",
+        "Where does PII flow in the data warehouse? Need this for our compliance audit."
+      ]
+    },
+    {
+      "name": "customers.dim_customer",
+      "asset_type": "Table",
+      "priority_score": 9.5,
+      "demand_signals": {
+        "num_questions": 4,
+        "unique_questioners": 4,
+        "question_complexity": "High",
+        "common_question_types": [
+          "Ownership",
+          "Lineage",
+          "Usage"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": null,
+        "gotchas": [],
+        "ownership": [
+          "jennifer",
+          "The Customer Data Platform Team",
+          "jennifer.lee"
+        ],
+        "related_terms": [
+          "Customer"
+        ]
+      },
+      "sample_questions": [
+        "Where does the data in the customer_360 dashboard come from? I need to understand the underlying tables for my analysis.",
+        "Who owns the customers.dim_customer table? I need to request a new column.",
+        "Where does PII flow in the data warehouse? Need this for our compliance audit."
+      ]
+    },
+    {
+      "name": "fct_orders",
+      "asset_type": "Table",
+      "priority_score": 9.0,
+      "demand_signals": {
+        "num_questions": 4,
+        "unique_questioners": 4,
+        "question_complexity": "Medium",
+        "common_question_types": [
+          "Lineage",
+          "Definitional"
+        ]
+      },
+      "extracted_context": {
+        "description": "Enumeration values: {1: 'pending', 2: 'confirmed', 3: 'shipped', 4: 'delivered', 5: 'cancelled', 6: 'refunded'}",
+        "business_context": null,
+        "gotchas": [],
+        "ownership": [],
+        "related_terms": [
+          "Customer"
+        ]
+      },
+      "sample_questions": [
+        "Where does the data in the customer_360 dashboard come from? I need to understand the underlying tables for my analysis.",
+        "What does the status column mean in orders.fct_orders? I see values like 1, 2, 3, 4, 5.",
+        "Where does PII flow in the data warehouse? Need this for our compliance audit."
+      ]
+    },
+    {
+      "name": "finance.revenue_daily_v2",
+      "asset_type": "Table",
+      "priority_score": 9.0,
+      "demand_signals": {
+        "num_questions": 3,
+        "unique_questioners": 3,
+        "question_complexity": "High",
+        "common_question_types": [
+          "Access",
+          "Unknown",
+          "Usage"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": "This gets asked weekly! finance.revenue_daily_v2 contains daily revenue aggregations including: gross_revenue, refunds, net_revenue, by product_line and region. It's the source of truth that reconciles to our GL. Finance Data team owns it. | ALWAYS use finance.revenue_daily_v2. This is the official source that reconciles to our financial systems. Ignore revenue_daily (deprecated) and any other revenue tables you might find.",
+        "gotchas": [],
+        "ownership": [
+          "Finance Data Team"
+        ],
+        "related_terms": [
+          "Revenue"
+        ]
+      },
+      "sample_questions": [
+        "Which revenue table should I use? I keep hearing different things.",
+        "How do I get access to the finance.revenue_daily_v2 table?",
+        "Revenue daily v2 - what exactly is included in this table again?"
+      ]
+    },
+    {
+      "name": "revenue_daily",
+      "asset_type": "Table",
+      "priority_score": 5.6,
+      "demand_signals": {
+        "num_questions": 2,
+        "unique_questioners": 2,
+        "question_complexity": "Medium",
+        "common_question_types": [
+          "Usage",
+          "Definitional"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": "Adding to David's point - revenue_daily_v2 reconciles to our financial systems. Always use v2 for anything finance-related. The Finance Data team owns this table. | ALWAYS use finance.revenue_daily_v2. This is the official source that reconciles to our financial systems. Ignore revenue_daily (deprecated) and any other revenue tables you might find.",
+        "gotchas": [],
+        "ownership": [
+          "The Finance Data Team"
+        ],
+        "related_terms": [
+          "Revenue"
+        ]
+      },
+      "sample_questions": [
+        "Can someone explain what the `revenue_daily` table contains vs `revenue_daily_v2`? I see both in the warehouse and not sure which one to use.",
+        "Which revenue table should I use? I keep hearing different things."
+      ]
+    },
+    {
+      "name": "orders.fct_orders",
+      "asset_type": "Table",
+      "priority_score": 5.6,
+      "demand_signals": {
+        "num_questions": 2,
+        "unique_questioners": 2,
+        "question_complexity": "Medium",
+        "common_question_types": [
+          "Lineage",
+          "Definitional"
+        ]
+      },
+      "extracted_context": {
+        "description": "Enumeration values: {1: 'pending', 2: 'confirmed', 3: 'shipped', 4: 'delivered', 5: 'cancelled', 6: 'refunded'}",
+        "business_context": null,
+        "gotchas": [],
+        "ownership": [],
+        "related_terms": []
+      },
+      "sample_questions": [
+        "What does the status column mean in orders.fct_orders? I see values like 1, 2, 3, 4, 5.",
+        "Where does PII flow in the data warehouse? Need this for our compliance audit."
+      ]
+    },
+    {
+      "name": "analytics.events",
+      "asset_type": "Table",
+      "priority_score": 5.1,
+      "demand_signals": {
+        "num_questions": 2,
+        "unique_questioners": 2,
+        "question_complexity": "Low",
+        "common_question_types": [
+          "Definitional"
+        ]
+      },
+      "extracted_context": {
+        "description": "Enumeration values: {1: 'signup', 2: 'trial_start', 3: 'paid_conversion', 4: 'upgrade', 5: 'downgrade', 6: 'churn'}",
+        "business_context": null,
+        "gotchas": [
+          "One row per event. Each event has a unique event_id. You can have multiple events per user per session. Be careful with aggregations - always dedupe on event_id first."
+        ],
+        "ownership": [],
+        "related_terms": [
+          "Churn",
+          "USER"
+        ]
+      },
+      "sample_questions": [
+        "What does conversion_type = 3 mean in the analytics.events table? I can't find any documentation.",
+        "What's the grain of the analytics.events table? Is it one row per event or aggregated somehow?"
+      ]
+    },
+    {
+      "name": "marketing.fct_campaigns",
+      "asset_type": "Table",
+      "priority_score": 2.8,
+      "demand_signals": {
+        "num_questions": 1,
+        "unique_questioners": 1,
+        "question_complexity": "Low",
+        "common_question_types": [
+          "Lineage"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": null,
+        "gotchas": [],
+        "ownership": [],
+        "related_terms": [
+          "Customer"
+        ]
+      },
+      "sample_questions": [
+        "Where does the data in the customer_360 dashboard come from? I need to understand the underlying tables for my analysis."
+      ]
+    },
+    {
+      "name": "sales.fct_orders",
+      "asset_type": "Table",
+      "priority_score": 2.8,
+      "demand_signals": {
+        "num_questions": 1,
+        "unique_questioners": 1,
+        "question_complexity": "Low",
+        "common_question_types": [
+          "Lineage"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": null,
+        "gotchas": [],
+        "ownership": [],
+        "related_terms": [
+          "Customer"
+        ]
+      },
+      "sample_questions": [
+        "Where does the data in the customer_360 dashboard come from? I need to understand the underlying tables for my analysis."
+      ]
+    },
+    {
+      "name": "fct_campaigns",
+      "asset_type": "Table",
+      "priority_score": 2.8,
+      "demand_signals": {
+        "num_questions": 1,
+        "unique_questioners": 1,
+        "question_complexity": "Low",
+        "common_question_types": [
+          "Lineage"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": null,
+        "gotchas": [],
+        "ownership": [],
+        "related_terms": [
+          "Customer"
+        ]
+      },
+      "sample_questions": [
+        "Where does the data in the customer_360 dashboard come from? I need to understand the underlying tables for my analysis."
+      ]
+    },
+    {
+      "name": "marketing.campaign_attribution",
+      "asset_type": "Table",
+      "priority_score": 2.8,
+      "demand_signals": {
+        "num_questions": 1,
+        "unique_questioners": 1,
+        "question_complexity": "Low",
+        "common_question_types": [
+          "Quality"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": null,
+        "gotchas": [
+          "Good catch - there's a known issue where multi-touch attribution double counts some conversions. We're working on a fix. For now, use single_touch_attribution = true filter for accurate counts."
+        ],
+        "ownership": [
+          "s Team"
+        ],
+        "related_terms": []
+      },
+      "sample_questions": [
+        "Is the marketing.campaign_attribution table reliable? I'm seeing some weird numbers."
+      ]
+    },
+    {
+      "name": "product.user_metrics",
+      "asset_type": "Table",
+      "priority_score": 2.8,
+      "demand_signals": {
+        "num_questions": 1,
+        "unique_questioners": 1,
+        "question_complexity": "Low",
+        "common_question_types": [
+          "Definitional"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": "For investor reporting, we always use dau. That's the official KPI definition approved by leadership.",
+        "gotchas": [],
+        "ownership": [],
+        "related_terms": [
+          "DAU"
+        ]
+      },
+      "sample_questions": [
+        "What's the difference between active_users and dau in the product.user_metrics table?"
+      ]
+    },
+    {
+      "name": "jennifer.lee",
+      "asset_type": "Table",
+      "priority_score": 2.8,
+      "demand_signals": {
+        "num_questions": 1,
+        "unique_questioners": 1,
+        "question_complexity": "Low",
+        "common_question_types": [
+          "Ownership"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": null,
+        "gotchas": [],
+        "ownership": [
+          "jennifer",
+          "The Customer Data Platform Team",
+          "jennifer.lee"
+        ],
+        "related_terms": [
+          "Customer"
+        ]
+      },
+      "sample_questions": [
+        "Who owns the customers.dim_customer table? I need to request a new column."
+      ]
+    },
+    {
+      "name": "pii.customer_raw",
+      "asset_type": "Table",
+      "priority_score": 2.8,
+      "demand_signals": {
+        "num_questions": 1,
+        "unique_questioners": 1,
+        "question_complexity": "Low",
+        "common_question_types": [
+          "Lineage"
+        ]
+      },
+      "extracted_context": {
+        "description": null,
+        "business_context": null,
+        "gotchas": [],
+        "ownership": [],
+        "related_terms": []
+      },
+      "sample_questions": [
+        "Where does PII flow in the data warehouse? Need this for our compliance audit."
+      ]
+    }
+  ],
+  "question_type_distribution": {
+    "Definitional": 29.5,
+    "Lineage": 34.1,
+    "Usage": 15.9,
+    "Quality": 4.5,
+    "Business Context": 0.0,
+    "Ownership": 6.8,
+    "Access": 4.5,
+    "Unknown": 4.5
+  },
+  "metadata_gaps": [
+    {
+      "gap_type": "Missing Descriptions",
+      "description": "Multiple assets lack clear descriptions, causing repeated definitional questions",
+      "affected_assets": [
+        "revenue_daily_v2",
+        "dim_customer",
+        "fct_orders",
+        "revenue_daily",
+        "orders.fct_orders"
+      ],
+      "severity": "High"
+    },
+    {
+      "gap_type": "Missing Ownership Information",
+      "description": "Users frequently ask who owns certain assets",
+      "affected_assets": [
+        "dim_customer",
+        "customers.dim_customer",
+        "jennifer.lee"
+      ],
+      "severity": "Medium"
+    },
+    {
+      "gap_type": "Undocumented Enumeration Values",
+      "description": "Column values/codes lack documentation causing confusion",
+      "affected_assets": [
+        "fct_orders",
+        "analytics.events",
+        "orders.fct_orders"
+      ],
+      "severity": "High"
+    },
+    {
+      "gap_type": "Versioning/Deprecation Confusion",
+      "description": "Multiple versions or legacy assets exist without clear guidance",
+      "affected_assets": [
+        "revenue_daily_v2",
+        "finance.revenue_daily_v2",
+        "legacy.customers"
+      ],
+      "severity": "Medium"
+    }
+  ],
+  "agent_recommendations": {
+    "description_agent": [
+      {
+        "asset": "fct_orders",
+        "suggested_description": "Enumeration values: {1: 'pending', 2: 'confirmed', 3: 'shipped', 4: 'delivered', 5: 'cancelled', 6: 'refunded'}",
+        "source_threads": [
+          "T003",
+          "T008",
+          "T009"
+        ]
+      },
+      {
+        "asset": "orders.fct_orders",
+        "suggested_description": "Enumeration values: {1: 'pending', 2: 'confirmed', 3: 'shipped', 4: 'delivered', 5: 'cancelled', 6: 'refunded'}",
+        "source_threads": [
+          "T008",
+          "T009"
+        ]
+      },
+      {
+        "asset": "analytics.events",
+        "suggested_description": "Enumeration values: {1: 'signup', 2: 'trial_start', 3: 'paid_conversion', 4: 'upgrade', 5: 'downgrade', 6: 'churn'}",
+        "source_threads": [
+          "T002",
+          "T011"
+        ]
+      },
+      {
+        "asset": "0.82",
+        "suggested_description": "Enumeration values: {30: 'low risk', 60: 'medium risk', 100: 'high risk'}",
+        "source_threads": [
+          "T013"
+        ]
+      },
+      {
+        "asset": "ml.customer_predictions",
+        "suggested_description": "Enumeration values: {30: 'low risk', 60: 'medium risk', 100: 'high risk'}",
+        "source_threads": [
+          "T013"
+        ]
+      }
+    ],
+    "glossary_linkage_agent": [
+      {
+        "asset": "revenue_daily_v2",
+        "terms_to_link": [
+          "Revenue"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "dim_customer",
+        "terms_to_link": [
+          "Subscription",
+          "Customer",
+          "Order"
+        ],
+        "term_count": 3
+      },
+      {
+        "asset": "customers.dim_customer",
+        "terms_to_link": [
+          "Customer"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "fct_orders",
+        "terms_to_link": [
+          "Customer"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "finance.revenue_daily_v2",
+        "terms_to_link": [
+          "Revenue"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "revenue_daily",
+        "terms_to_link": [
+          "Revenue"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "analytics.events",
+        "terms_to_link": [
+          "Churn",
+          "USER"
+        ],
+        "term_count": 2
+      },
+      {
+        "asset": "marketing.fct_campaigns",
+        "terms_to_link": [
+          "Customer"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "sales.fct_orders",
+        "terms_to_link": [
+          "Customer"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "fct_campaigns",
+        "terms_to_link": [
+          "Customer"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "product.user_metrics",
+        "terms_to_link": [
+          "DAU"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "jennifer.lee",
+        "terms_to_link": [
+          "Customer"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "0.82",
+        "terms_to_link": [
+          "Churn"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "ml.customer_predictions",
+        "terms_to_link": [
+          "Churn"
+        ],
+        "term_count": 1
+      },
+      {
+        "asset": "finance.subscriptions",
+        "terms_to_link": [
+          "Subscription",
+          "MRR",
+          "Revenue"
+        ],
+        "term_count": 3
+      },
+      {
+        "asset": "product.feature_usage",
+        "terms_to_link": [
+          "USER",
+          "Product"
+        ],
+        "term_count": 2
+      },
+      {
+        "asset": "customers.dim_customer.is_active",
+        "terms_to_link": [
+          "Subscription",
+          "Customer",
+          "Order"
+        ],
+        "term_count": 3
+      }
+    ],
+    "ownership_agent": [
+      {
+        "asset": "revenue_daily_v2",
+        "identified_owners": [
+          "The Finance Data Team",
+          "Finance Data Team"
+        ],
+        "confidence": "High"
+      },
+      {
+        "asset": "dim_customer",
+        "identified_owners": [
+          "jennifer",
+          "The Customer Data Platform Team",
+          "jennifer.lee"
+        ],
+        "confidence": "High"
+      },
+      {
+        "asset": "customers.dim_customer",
+        "identified_owners": [
+          "jennifer",
+          "The Customer Data Platform Team",
+          "jennifer.lee"
+        ],
+        "confidence": "High"
+      },
+      {
+        "asset": "finance.revenue_daily_v2",
+        "identified_owners": [
+          "Finance Data Team"
+        ],
+        "confidence": "Medium"
+      },
+      {
+        "asset": "revenue_daily",
+        "identified_owners": [
+          "The Finance Data Team"
+        ],
+        "confidence": "Medium"
+      },
+      {
+        "asset": "marketing.campaign_attribution",
+        "identified_owners": [
+          "s Team"
+        ],
+        "confidence": "Medium"
+      },
+      {
+        "asset": "jennifer.lee",
+        "identified_owners": [
+          "jennifer",
+          "The Customer Data Platform Team",
+          "jennifer.lee"
+        ],
+        "confidence": "High"
+      },
+      {
+        "asset": "pipeline.opportunities",
+        "identified_owners": [
+          "The Sales Ops Team"
+        ],
+        "confidence": "Medium"
+      },
+      {
+        "asset": "0.82",
+        "identified_owners": [
+          "The ML Platform Team"
+        ],
+        "confidence": "Medium"
+      },
+      {
+        "asset": "ml.customer_predictions",
+        "identified_owners": [
+          "The ML Platform Team"
+        ],
+        "confidence": "Medium"
+      },
+      {
+        "asset": "product.feature_usage",
+        "identified_owners": [
+          "The Product Analytics Team"
+        ],
+        "confidence": "Medium"
+      }
+    ],
+    "quality_context_agent": [
+      {
+        "asset": "analytics.events",
+        "quality_notes": [
+          "One row per event. Each event has a unique event_id. You can have multiple events per user per session. Be careful with aggregations - always dedupe on event_id first."
+        ],
+        "severity": "Medium"
+      },
+      {
+        "asset": "marketing.campaign_attribution",
+        "quality_notes": [
+          "Good catch - there's a known issue where multi-touch attribution double counts some conversions. We're working on a fix. For now, use single_touch_attribution = true filter for accurate counts."
+        ],
+        "severity": "Medium"
+      },
+      {
+        "asset": "product.feature_usage",
+        "quality_notes": [
+          "It's generally reliable but has gaps for mobile events before 2025-06. Also, about 5% of events are missing user_id due to anonymous sessions - filter on user_id IS NOT NULL for user-level analysis.",
+          "The Product Analytics team owns this table. They're working on backfilling the mobile gaps."
+        ],
+        "severity": "High"
+      }
+    ]
+  }
+}
