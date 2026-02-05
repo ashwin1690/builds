@@ -1,0 +1,393 @@
+{
+  "channel_name": "#data-questions",
+  "date_range": "2025-11-01 to 2026-01-31",
+  "messages": [
+    {
+      "thread_id": "T001",
+      "timestamp": "2025-11-05T09:23:00Z",
+      "user": "sarah.chen",
+      "user_role": "Product Analyst",
+      "message": "Can someone explain what the `revenue_daily` table contains vs `revenue_daily_v2`? I see both in the warehouse and not sure which one to use.",
+      "replies": [
+        {
+          "timestamp": "2025-11-05T09:45:00Z",
+          "user": "david.kim",
+          "user_role": "Data Engineer",
+          "message": "revenue_daily_v2 is the source of truth - it includes refunds and adjustments. The old revenue_daily table is deprecated but we haven't removed it yet to avoid breaking old dashboards."
+        },
+        {
+          "timestamp": "2025-11-05T10:02:00Z",
+          "user": "jessica.wong",
+          "user_role": "Finance Lead",
+          "message": "Adding to David's point - revenue_daily_v2 reconciles to our financial systems. Always use v2 for anything finance-related. The Finance Data team owns this table."
+        }
+      ]
+    },
+    {
+      "thread_id": "T002",
+      "timestamp": "2025-11-08T14:15:00Z",
+      "user": "mike.rodriguez",
+      "user_role": "Business Analyst",
+      "message": "What does conversion_type = 3 mean in the analytics.events table? I can't find any documentation.",
+      "replies": [
+        {
+          "timestamp": "2025-11-08T14:30:00Z",
+          "user": "anna.li",
+          "user_role": "Analytics Engineer",
+          "message": "The conversion_type values are: 1=signup, 2=trial_start, 3=paid_conversion, 4=upgrade, 5=downgrade, 6=churn. This should really be documented somewhere!"
+        }
+      ]
+    },
+    {
+      "thread_id": "T003",
+      "timestamp": "2025-11-12T11:00:00Z",
+      "user": "tom.baker",
+      "user_role": "New Hire - Analyst",
+      "message": "Where does the data in the customer_360 dashboard come from? I need to understand the underlying tables for my analysis.",
+      "replies": [
+        {
+          "timestamp": "2025-11-12T11:20:00Z",
+          "user": "lisa.zhang",
+          "user_role": "BI Lead",
+          "message": "The Customer 360 dashboard pulls from three main tables: customers.dim_customer, sales.fct_orders, and marketing.fct_campaigns. It joins on customer_id and aggregates at the customer level."
+        },
+        {
+          "timestamp": "2025-11-12T11:35:00Z",
+          "user": "david.kim",
+          "user_role": "Data Engineer",
+          "message": "Quick note - there's about a 2-hour latency on the fct_orders data. The dashboard refreshes at 6am UTC daily."
+        }
+      ]
+    },
+    {
+      "thread_id": "T004",
+      "timestamp": "2025-11-15T16:45:00Z",
+      "user": "emma.wilson",
+      "user_role": "Marketing Analyst",
+      "message": "Is the marketing.campaign_attribution table reliable? I'm seeing some weird numbers.",
+      "replies": [
+        {
+          "timestamp": "2025-11-15T17:00:00Z",
+          "user": "ryan.patel",
+          "user_role": "Marketing Data Lead",
+          "message": "Good catch - there's a known issue where multi-touch attribution double counts some conversions. We're working on a fix. For now, use single_touch_attribution = true filter for accurate counts."
+        },
+        {
+          "timestamp": "2025-11-15T17:15:00Z",
+          "user": "anna.li",
+          "user_role": "Analytics Engineer",
+          "message": "The fix should be in production by next week. Ryan's team owns this table. Ping them if you need historical data corrected."
+        }
+      ]
+    },
+    {
+      "thread_id": "T005",
+      "timestamp": "2025-11-20T10:30:00Z",
+      "user": "james.taylor",
+      "user_role": "Data Scientist",
+      "message": "What's the difference between active_users and dau in the product.user_metrics table?",
+      "replies": [
+        {
+          "timestamp": "2025-11-20T10:45:00Z",
+          "user": "sarah.chen",
+          "user_role": "Product Analyst",
+          "message": "active_users includes anyone who logged in. dau (daily active users) only counts users who performed a 'meaningful action' - defined as creating content, purchasing, or spending 5+ minutes in app."
+        },
+        {
+          "timestamp": "2025-11-20T11:00:00Z",
+          "user": "jessica.wong",
+          "user_role": "Finance Lead",
+          "message": "For investor reporting, we always use dau. That's the official KPI definition approved by leadership."
+        }
+      ]
+    },
+    {
+      "thread_id": "T006",
+      "timestamp": "2025-11-22T08:15:00Z",
+      "user": "chris.martin",
+      "user_role": "New Hire - Engineer",
+      "message": "Who owns the customers.dim_customer table? I need to request a new column.",
+      "replies": [
+        {
+          "timestamp": "2025-11-22T08:30:00Z",
+          "user": "david.kim",
+          "user_role": "Data Engineer",
+          "message": "The Customer Data Platform team owns dim_customer. @jennifer.lee is the primary contact. File a ticket in their Jira board."
+        }
+      ]
+    },
+    {
+      "thread_id": "T007",
+      "timestamp": "2025-11-25T13:00:00Z",
+      "user": "nicole.brown",
+      "user_role": "Analyst",
+      "message": "Can someone explain what revenue_daily_v2 is? Need it for a report.",
+      "replies": [
+        {
+          "timestamp": "2025-11-25T13:15:00Z",
+          "user": "david.kim",
+          "user_role": "Data Engineer",
+          "message": "See the thread from 2 weeks ago - it's our source of truth for revenue including refunds. The Finance Data team owns it."
+        }
+      ]
+    },
+    {
+      "thread_id": "T008",
+      "timestamp": "2025-11-28T15:30:00Z",
+      "user": "alex.johnson",
+      "user_role": "Product Manager",
+      "message": "What does the status column mean in orders.fct_orders? I see values like 1, 2, 3, 4, 5.",
+      "replies": [
+        {
+          "timestamp": "2025-11-28T15:50:00Z",
+          "user": "lisa.zhang",
+          "user_role": "BI Lead",
+          "message": "Status codes: 1=pending, 2=confirmed, 3=shipped, 4=delivered, 5=cancelled, 6=refunded. We really need an enum table for these!"
+        }
+      ]
+    },
+    {
+      "thread_id": "T009",
+      "timestamp": "2025-12-02T09:00:00Z",
+      "user": "rachel.green",
+      "user_role": "Compliance Analyst",
+      "message": "Where does PII flow in the data warehouse? Need this for our compliance audit.",
+      "replies": [
+        {
+          "timestamp": "2025-12-02T09:30:00Z",
+          "user": "david.kim",
+          "user_role": "Data Engineer",
+          "message": "PII is in: customers.dim_customer (email, phone, address), orders.fct_orders (shipping_address), and support.tickets (customer_email). All other tables should have hashed or anonymized identifiers only."
+        },
+        {
+          "timestamp": "2025-12-02T10:00:00Z",
+          "user": "jennifer.lee",
+          "user_role": "CDP Team Lead",
+          "message": "We also have pii.customer_raw which is the source for dim_customer. Access is restricted to the CDP team only."
+        }
+      ]
+    },
+    {
+      "thread_id": "T010",
+      "timestamp": "2025-12-05T11:20:00Z",
+      "user": "kevin.harris",
+      "user_role": "Sales Analyst",
+      "message": "The pipeline.opportunities table - is this synced from Salesforce? How fresh is the data?",
+      "replies": [
+        {
+          "timestamp": "2025-12-05T11:45:00Z",
+          "user": "anna.li",
+          "user_role": "Analytics Engineer",
+          "message": "Yes, it's a Fivetran sync from Salesforce. Updates every 15 minutes. The Sales Ops team owns the Salesforce data, but Data Engineering owns the pipeline."
+        }
+      ]
+    },
+    {
+      "thread_id": "T011",
+      "timestamp": "2025-12-08T14:00:00Z",
+      "user": "maria.garcia",
+      "user_role": "Analyst",
+      "message": "What's the grain of the analytics.events table? Is it one row per event or aggregated somehow?",
+      "replies": [
+        {
+          "timestamp": "2025-12-08T14:20:00Z",
+          "user": "anna.li",
+          "user_role": "Analytics Engineer",
+          "message": "One row per event. Each event has a unique event_id. You can have multiple events per user per session. Be careful with aggregations - always dedupe on event_id first."
+        }
+      ]
+    },
+    {
+      "thread_id": "T012",
+      "timestamp": "2025-12-10T16:00:00Z",
+      "user": "brian.clark",
+      "user_role": "Finance Analyst",
+      "message": "Which revenue table should I use? I keep hearing different things.",
+      "replies": [
+        {
+          "timestamp": "2025-12-10T16:15:00Z",
+          "user": "jessica.wong",
+          "user_role": "Finance Lead",
+          "message": "ALWAYS use finance.revenue_daily_v2. This is the official source that reconciles to our financial systems. Ignore revenue_daily (deprecated) and any other revenue tables you might find."
+        }
+      ]
+    },
+    {
+      "thread_id": "T013",
+      "timestamp": "2025-12-15T10:30:00Z",
+      "user": "stephanie.lee",
+      "user_role": "Data Scientist",
+      "message": "How do I interpret the churn_risk_score in the ml.customer_predictions table? What's the threshold for 'high risk'?",
+      "replies": [
+        {
+          "timestamp": "2025-12-15T11:00:00Z",
+          "user": "james.taylor",
+          "user_role": "Data Scientist",
+          "message": "Score is 0-100. Our standard thresholds: 0-30 = low risk, 31-60 = medium risk, 61-100 = high risk. Model was trained on 12 months of historical churn data and refreshes weekly."
+        },
+        {
+          "timestamp": "2025-12-15T11:15:00Z",
+          "user": "jennifer.lee",
+          "user_role": "CDP Team Lead",
+          "message": "The ML Platform team owns this model. Current AUC is 0.82. We're working on v2 that should improve accuracy."
+        }
+      ]
+    },
+    {
+      "thread_id": "T014",
+      "timestamp": "2025-12-18T09:45:00Z",
+      "user": "andrew.white",
+      "user_role": "Marketing Analyst",
+      "message": "What's conversion_type again in the events table? Need values for a query.",
+      "replies": [
+        {
+          "timestamp": "2025-12-18T10:00:00Z",
+          "user": "mike.rodriguez",
+          "user_role": "Business Analyst",
+          "message": "1=signup, 2=trial_start, 3=paid_conversion, 4=upgrade, 5=downgrade, 6=churn. Asked this same question last month - we really need this documented!"
+        }
+      ]
+    },
+    {
+      "thread_id": "T015",
+      "timestamp": "2025-12-20T13:30:00Z",
+      "user": "peter.jones",
+      "user_role": "Intern",
+      "message": "How do I get access to the finance.revenue_daily_v2 table?",
+      "replies": [
+        {
+          "timestamp": "2025-12-20T13:45:00Z",
+          "user": "jessica.wong",
+          "user_role": "Finance Lead",
+          "message": "Submit an access request through ServiceNow. You'll need manager approval and Finance team approval since it contains sensitive data. Usually takes 1-2 business days."
+        }
+      ]
+    },
+    {
+      "thread_id": "T016",
+      "timestamp": "2026-01-05T10:00:00Z",
+      "user": "olivia.martinez",
+      "user_role": "Product Analyst",
+      "message": "What does the mrr column in finance.subscriptions represent? Is it monthly recurring revenue at the subscription level?",
+      "replies": [
+        {
+          "timestamp": "2026-01-05T10:30:00Z",
+          "user": "jessica.wong",
+          "user_role": "Finance Lead",
+          "message": "Yes, mrr is Monthly Recurring Revenue at the subscription level in USD. For annual subscriptions, it's the annual amount divided by 12. Excludes one-time fees and overages."
+        }
+      ]
+    },
+    {
+      "thread_id": "T017",
+      "timestamp": "2026-01-08T15:00:00Z",
+      "user": "daniel.kim",
+      "user_role": "New Hire - Analyst",
+      "message": "I found three different customer tables - customers.dim_customer, legacy.customers, and raw.customer_data. Which should I use?",
+      "replies": [
+        {
+          "timestamp": "2026-01-08T15:20:00Z",
+          "user": "david.kim",
+          "user_role": "Data Engineer",
+          "message": "Use customers.dim_customer - that's the curated, production-ready dimension table. legacy.customers is from our old system (pre-2024 data only). raw.customer_data is the raw source before transformations - never use for analysis."
+        }
+      ]
+    },
+    {
+      "thread_id": "T018",
+      "timestamp": "2026-01-12T11:30:00Z",
+      "user": "susan.wang",
+      "user_role": "Data Scientist",
+      "message": "What columns in customer_360 dashboard are calculated vs. pulled directly from tables?",
+      "replies": [
+        {
+          "timestamp": "2026-01-12T12:00:00Z",
+          "user": "lisa.zhang",
+          "user_role": "BI Lead",
+          "message": "Calculated fields: lifetime_value (sum of all orders), health_score (custom formula), days_since_last_order. Everything else is direct from dim_customer and fct_orders."
+        }
+      ]
+    },
+    {
+      "thread_id": "T019",
+      "timestamp": "2026-01-15T09:00:00Z",
+      "user": "jason.miller",
+      "user_role": "Business Analyst",
+      "message": "What does conversion_type mean in the events table? Building a funnel report.",
+      "replies": [
+        {
+          "timestamp": "2026-01-15T09:10:00Z",
+          "user": "anna.li",
+          "user_role": "Analytics Engineer",
+          "message": "This is asked so often! 1=signup, 2=trial_start, 3=paid_conversion, 4=upgrade, 5=downgrade, 6=churn. I'll create a Jira ticket to add this to the data catalog."
+        }
+      ]
+    },
+    {
+      "thread_id": "T020",
+      "timestamp": "2026-01-18T14:15:00Z",
+      "user": "amy.chen",
+      "user_role": "Analyst",
+      "message": "Is the product.feature_usage table safe to use for analysis? Heard there might be quality issues.",
+      "replies": [
+        {
+          "timestamp": "2026-01-18T14:40:00Z",
+          "user": "sarah.chen",
+          "user_role": "Product Analyst",
+          "message": "It's generally reliable but has gaps for mobile events before 2025-06. Also, about 5% of events are missing user_id due to anonymous sessions - filter on user_id IS NOT NULL for user-level analysis."
+        },
+        {
+          "timestamp": "2026-01-18T15:00:00Z",
+          "user": "ryan.patel",
+          "user_role": "Marketing Data Lead",
+          "message": "The Product Analytics team owns this table. They're working on backfilling the mobile gaps."
+        }
+      ]
+    },
+    {
+      "thread_id": "T021",
+      "timestamp": "2026-01-22T10:45:00Z",
+      "user": "mark.thompson",
+      "user_role": "Sales Manager",
+      "message": "What's the definition of an 'active customer' in our reporting?",
+      "replies": [
+        {
+          "timestamp": "2026-01-22T11:00:00Z",
+          "user": "jessica.wong",
+          "user_role": "Finance Lead",
+          "message": "Active customer = has at least one order in the last 365 days. This is flagged in customers.dim_customer.is_active. For subscription businesses, active = has current active subscription."
+        }
+      ]
+    },
+    {
+      "thread_id": "T022",
+      "timestamp": "2026-01-25T16:30:00Z",
+      "user": "laura.adams",
+      "user_role": "Marketing Manager",
+      "message": "Who should I contact about the UTM tracking data? Seeing some missing utm_source values.",
+      "replies": [
+        {
+          "timestamp": "2026-01-25T16:50:00Z",
+          "user": "ryan.patel",
+          "user_role": "Marketing Data Lead",
+          "message": "That would be me! The Marketing Data team owns all UTM and attribution data. Missing utm_source usually means direct traffic or tracking wasn't properly set up on the campaign. DM me with specifics."
+        }
+      ]
+    },
+    {
+      "thread_id": "T023",
+      "timestamp": "2026-01-28T11:00:00Z",
+      "user": "eric.nelson",
+      "user_role": "Analyst",
+      "message": "Revenue daily v2 - what exactly is included in this table again?",
+      "replies": [
+        {
+          "timestamp": "2026-01-28T11:20:00Z",
+          "user": "david.kim",
+          "user_role": "Data Engineer",
+          "message": "This gets asked weekly! finance.revenue_daily_v2 contains daily revenue aggregations including: gross_revenue, refunds, net_revenue, by product_line and region. It's the source of truth that reconciles to our GL. Finance Data team owns it."
+        }
+      ]
+    }
+  ]
+}
