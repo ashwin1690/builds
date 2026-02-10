@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from slack_client import SlackClient, SlackClientError
 from slack_metadata_analyzer import SlackMetadataAnalyzer, format_markdown_report
+from transcript_parser import parse_transcript
 
 
 # Page configuration
@@ -112,11 +113,11 @@ def main():
         st.markdown("---")
 
         # Alternative: File upload
-        st.subheader("Or Upload JSON")
+        st.subheader("Or Upload File")
         uploaded_file = st.file_uploader(
-            "Upload Slack export",
-            type=["json"],
-            help="Upload a JSON file with Slack messages"
+            "Upload Slack export or transcript",
+            type=["json", "txt"],
+            help="Upload a JSON file (Slack export) or TXT file (call transcript)"
         )
 
         st.markdown("---")
@@ -167,9 +168,14 @@ def show_instructions():
         2. Enter the channel name you want to analyze
         3. Click "Run Analysis"
 
-        **Option 2: Upload JSON**
+        **Option 2: Upload Slack JSON**
         1. Export your Slack messages to JSON
         2. Upload the file using the sidebar
+        3. Click "Run Analysis"
+
+        **Option 3: Upload Call Transcript**
+        1. Prepare transcript in format: `[HH:MM:SS] Speaker: Message`
+        2. Upload the .txt file using the sidebar
         3. Click "Run Analysis"
         """)
 
@@ -260,15 +266,27 @@ def run_channel_analysis(token: str, channel: str, days: int, limit: int):
 
 
 def run_file_analysis(uploaded_file):
-    """Run analysis on an uploaded JSON file."""
+    """Run analysis on an uploaded JSON or TXT file."""
     progress_bar = st.progress(0)
     status_text = st.empty()
 
     try:
+        # Determine file type
+        file_name = uploaded_file.name
+        is_transcript = file_name.endswith('.txt')
+
         # Step 1: Parse file
         status_text.text("📂 Reading file...")
         progress_bar.progress(20)
-        messages_data = json.load(uploaded_file)
+
+        if is_transcript:
+            # Parse transcript file
+            transcript_text = uploaded_file.read().decode('utf-8')
+            title = file_name.replace('.txt', '').replace('_', ' ').title()
+            messages_data = parse_transcript(transcript_text, title)
+        else:
+            # Parse JSON file
+            messages_data = json.load(uploaded_file)
 
         if not messages_data.get("messages"):
             st.warning("No messages found in the uploaded file.")
