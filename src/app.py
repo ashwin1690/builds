@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from slack_client import SlackClient, SlackClientError, test_connection
 from slack_metadata_analyzer import SlackMetadataAnalyzer, format_markdown_report
+from transcript_parser import parse_transcript_file
 
 
 def print_banner():
@@ -59,12 +60,11 @@ def print_summary(results: dict):
     if priority_assets:
         print("\n🎯 TOP PRIORITY ASSETS FOR CURATION:")
         print("-" * 40)
-        for i, asset in enumerate(priority_assets, 1):
-            score = asset.get("priority_score", 0)
-            name = asset.get("name", "Unknown")
-            signals = asset.get("demand_signals", {})
-            q_count = signals.get("num_questions", 0)
-            print(f"  {i}. {name}")
+        for i, asset_data in enumerate(priority_assets, 1):
+            score = asset_data.get("priority_score", 0)
+            asset_name = asset_data.get("asset", "Unknown")
+            q_count = asset_data.get("questions", 0)
+            print(f"  {i}. {asset_name}")
             print(f"     Score: {score}/10 | Questions: {q_count}")
 
     # Question type distribution
@@ -151,27 +151,21 @@ def analyze_channel(args):
 
     # Save JSON
     json_path = os.path.join(output_dir, f"{channel_safe}_analysis_{timestamp}.json")
+    json_filename = os.path.basename(json_path)
     with open(json_path, "w") as f:
         json.dump(results, f, indent=2)
-    print(f"✓ JSON report saved: {json_path}")
+    print(f"✓ JSON report: {json_filename}")
 
     # Save Markdown
     md_report = format_markdown_report(results)
     md_path = os.path.join(output_dir, f"{channel_safe}_analysis_{timestamp}.md")
+    md_filename = os.path.basename(md_path)
     with open(md_path, "w") as f:
         f.write(md_report)
-    print(f"✓ Markdown report saved: {md_path}")
-
-    # Save raw messages for reference
-    raw_path = os.path.join(output_dir, f"{channel_safe}_messages_{timestamp}.json")
-    with open(raw_path, "w") as f:
-        json.dump(messages_data, f, indent=2)
-    print(f"✓ Raw messages saved: {raw_path}")
+    print(f"✓ Markdown report: {md_filename}")
 
     # Print summary
     print_summary(results)
-
-    print(f"\n📄 Full reports available in: {output_dir}/")
 
 
 def analyze_file(args):
@@ -207,16 +201,68 @@ def analyze_file(args):
 
     # Save JSON
     json_path = os.path.join(output_dir, f"analysis_{timestamp}.json")
+    json_filename = os.path.basename(json_path)
     with open(json_path, "w") as f:
         json.dump(results, f, indent=2)
-    print(f"✓ JSON report saved: {json_path}")
+    print(f"✓ JSON report: {json_filename}")
 
     # Save Markdown
     md_report = format_markdown_report(results)
     md_path = os.path.join(output_dir, f"analysis_{timestamp}.md")
+    md_filename = os.path.basename(md_path)
     with open(md_path, "w") as f:
         f.write(md_report)
-    print(f"✓ Markdown report saved: {md_path}")
+    print(f"✓ Markdown report: {md_filename}")
+
+    # Print summary
+    print_summary(results)
+
+
+def analyze_transcript(args):
+    """Analyze from a call transcript file."""
+    print_banner()
+
+    input_file = args.input
+    output_dir = args.output
+    title = args.title if hasattr(args, 'title') and args.title else None
+
+    print(f"📞 Reading transcript: {os.path.basename(input_file)}")
+
+    # Parse transcript
+    try:
+        messages_data = parse_transcript_file(input_file, title)
+    except FileNotFoundError:
+        print(f"❌ File not found: {input_file}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error parsing transcript: {e}")
+        sys.exit(1)
+
+    print(f"✓ Parsed {len(messages_data.get('messages', []))} conversation threads")
+
+    # Run analysis
+    print("\n🔬 Running analysis...")
+    analyzer = SlackMetadataAnalyzer(messages_data)
+    results = analyzer.analyze()
+
+    # Save results
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Save JSON
+    json_path = os.path.join(output_dir, f"transcript_analysis_{timestamp}.json")
+    json_filename = os.path.basename(json_path)
+    with open(json_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"✓ JSON report: {json_filename}")
+
+    # Save Markdown
+    md_report = format_markdown_report(results)
+    md_path = os.path.join(output_dir, f"transcript_analysis_{timestamp}.md")
+    md_filename = os.path.basename(md_path)
+    with open(md_path, "w") as f:
+        f.write(md_report)
+    print(f"✓ Markdown report: {md_filename}")
 
     # Print summary
     print_summary(results)
@@ -305,11 +351,17 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Analyze a channel
+  # Analyze a Slack channel
   python src/app.py analyze --channel data-questions
 
   # Analyze with custom options
   python src/app.py analyze --channel data-questions --days 60 --output ./my-report
+
+  # Analyze a call transcript
+  python src/app.py analyze-transcript --input transcript.txt
+
+  # Analyze a call transcript with custom title
+  python src/app.py analyze-transcript --input call_notes.txt --title "Team Sync Call"
 
   # Test your Slack connection
   python src/app.py test-connection
@@ -371,6 +423,26 @@ Environment Variables:
         help="Output directory for reports (default: ./reports)"
     )
 
+    # analyze-transcript command
+    transcript_parser = subparsers.add_parser(
+        "analyze-transcript",
+        help="Analyze from a call transcript file"
+    )
+    transcript_parser.add_argument(
+        "--input", "-i",
+        required=True,
+        help="Path to transcript file (plain text with timestamps)"
+    )
+    transcript_parser.add_argument(
+        "--output", "-o",
+        default="./reports",
+        help="Output directory for reports (default: ./reports)"
+    )
+    transcript_parser.add_argument(
+        "--title", "-t",
+        help="Title for the transcript (default: filename)"
+    )
+
     # test-connection command
     subparsers.add_parser(
         "test-connection",
@@ -383,6 +455,8 @@ Environment Variables:
         analyze_channel(args)
     elif args.command == "analyze-file":
         analyze_file(args)
+    elif args.command == "analyze-transcript":
+        analyze_transcript(args)
     elif args.command == "test-connection":
         cmd_test_connection(args)
     else:

@@ -434,34 +434,26 @@ class SlackMetadataAnalyzer:
             all_ownership.extend(ctx.ownership)
             all_terms.extend(ctx.related_terms)
 
-        # Determine question complexity
-        unique_types = len(set(asset.question_types))
-        if unique_types >= 3:
-            complexity = "High"
-        elif unique_types >= 2:
-            complexity = "Medium"
-        else:
-            complexity = "Low"
-
-        return {
-            'name': asset.name,
-            'asset_type': asset.asset_type.value,
+        # Clean output format
+        result = {
+            'asset': f"{asset.name} ({asset.asset_type.value})",
             'priority_score': asset.priority_score,
-            'demand_signals': {
-                'num_questions': asset.num_questions,
-                'unique_questioners': asset.unique_questioners,
-                'question_complexity': complexity,
-                'common_question_types': list(set(asset.question_types))
-            },
-            'extracted_context': {
-                'description': ' | '.join(set(descriptions)) if descriptions else None,
-                'business_context': ' | '.join(set(business_contexts)) if business_contexts else None,
-                'gotchas': list(set(all_gotchas)),
-                'ownership': list(set(all_ownership)),
-                'related_terms': list(set(all_terms))
-            },
-            'sample_questions': [m.question for m in asset.mentions[:3]]
+            'questions': asset.num_questions,
         }
+
+        # Add extracted context only if present
+        if descriptions:
+            result['description'] = ' | '.join(set(descriptions))
+        if business_contexts:
+            result['business_context'] = ' | '.join(set(business_contexts))
+        if all_ownership:
+            result['ownership'] = list(set(all_ownership))
+        if all_gotchas:
+            result['quality_notes'] = list(set(all_gotchas))
+        if all_terms:
+            result['related_terms'] = list(set(all_terms))
+
+        return result
 
     def _identify_metadata_gaps(self, sorted_assets: list) -> list:
         """Identify systemic metadata gaps."""
@@ -472,10 +464,8 @@ class SlackMetadataAnalyzer:
                               if QuestionType.DEFINITIONAL.value in a.question_types]
         if len(definitional_assets) >= 3:
             gaps.append({
-                'gap_type': 'Missing Descriptions',
-                'description': 'Multiple assets lack clear descriptions, causing repeated definitional questions',
-                'affected_assets': [a.name for a in definitional_assets[:5]],
-                'severity': 'High'
+                'type': 'Missing Descriptions',
+                'assets': [f"{a.name} ({a.asset_type.value})" for a in definitional_assets[:5]]
             })
 
         # Check for ownership gaps
@@ -483,34 +473,31 @@ class SlackMetadataAnalyzer:
                           if QuestionType.OWNERSHIP.value in a.question_types]
         if ownership_assets:
             gaps.append({
-                'gap_type': 'Missing Ownership Information',
-                'description': 'Users frequently ask who owns certain assets',
-                'affected_assets': [a.name for a in ownership_assets[:5]],
-                'severity': 'Medium'
+                'type': 'Missing Ownership',
+                'assets': [f"{a.name} ({a.asset_type.value})" for a in ownership_assets[:5]]
             })
 
         # Check for enumeration/value gaps
         enum_mentions = []
+        enum_asset_objs = []
         for asset in sorted_assets:
             for mention in asset.mentions:
                 if 'values' in mention.question.lower() or '=' in mention.question:
-                    enum_mentions.append(asset.name)
-        if len(set(enum_mentions)) >= 2:
+                    if asset.name not in enum_mentions:
+                        enum_mentions.append(asset.name)
+                        enum_asset_objs.append(asset)
+        if len(enum_mentions) >= 2:
             gaps.append({
-                'gap_type': 'Undocumented Enumeration Values',
-                'description': 'Column values/codes lack documentation causing confusion',
-                'affected_assets': list(set(enum_mentions))[:5],
-                'severity': 'High'
+                'type': 'Undocumented Values',
+                'assets': [f"{a.name} ({a.asset_type.value})" for a in enum_asset_objs[:5]]
             })
 
         # Check for deprecated/duplicate asset confusion
         version_assets = [a for a in sorted_assets if '_v' in a.name or 'legacy' in a.name]
         if version_assets:
             gaps.append({
-                'gap_type': 'Versioning/Deprecation Confusion',
-                'description': 'Multiple versions or legacy assets exist without clear guidance',
-                'affected_assets': [a.name for a in version_assets],
-                'severity': 'Medium'
+                'type': 'Versioning Confusion',
+                'assets': [f"{a.name} ({a.asset_type.value})" for a in version_assets]
             })
 
         return gaps
@@ -545,33 +532,29 @@ class SlackMetadataAnalyzer:
             # Description Agent: Assets with synthesized descriptions
             if all_descriptions:
                 recommendations['description_agent'].append({
-                    'asset': asset.name,
-                    'suggested_description': all_descriptions[0],
-                    'source_threads': [m.thread_id for m in asset.mentions[:3]]
+                    'asset': f"{asset.name} ({asset.asset_type.value})",
+                    'description': all_descriptions[0]
                 })
 
             # Ownership Agent: Assets with identified owners
             if all_ownership:
                 recommendations['ownership_agent'].append({
-                    'asset': asset.name,
-                    'identified_owners': list(set(all_ownership)),
-                    'confidence': 'High' if len(all_ownership) > 1 else 'Medium'
+                    'asset': f"{asset.name} ({asset.asset_type.value})",
+                    'owners': list(set(all_ownership))
                 })
 
             # Quality Context Agent: Assets with quality caveats
             if all_gotchas:
                 recommendations['quality_context_agent'].append({
-                    'asset': asset.name,
-                    'quality_notes': list(set(all_gotchas)),
-                    'severity': 'High' if len(all_gotchas) > 1 else 'Medium'
+                    'asset': f"{asset.name} ({asset.asset_type.value})",
+                    'notes': list(set(all_gotchas))
                 })
 
             # Glossary Linkage: Assets with business terms
             if all_terms:
                 recommendations['glossary_linkage_agent'].append({
-                    'asset': asset.name,
-                    'terms_to_link': list(set(all_terms)),
-                    'term_count': len(set(all_terms))
+                    'asset': f"{asset.name} ({asset.asset_type.value})",
+                    'terms': list(set(all_terms))
                 })
 
         return recommendations
@@ -581,121 +564,96 @@ def format_markdown_report(analysis: dict) -> str:
     """Format the analysis as a markdown report."""
     lines = []
 
-    lines.append("# Slack Metadata Gap Analysis Report")
+    lines.append("# Metadata Gap Analysis")
     lines.append("")
     lines.append(f"**Channel:** {analysis['channel_name']}")
     lines.append(f"**Period:** {analysis['date_range']}")
-    lines.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append("")
 
     # Summary
-    lines.append("## Executive Summary")
+    lines.append("## Summary")
     lines.append("")
     summary = analysis['summary']
-    lines.append(f"- **Threads Analyzed:** {summary['total_threads_analyzed']}")
-    lines.append(f"- **Unique Assets Identified:** {summary['unique_assets_identified']}")
-    lines.append(f"- **Assets with Questions:** {summary['assets_with_questions']}")
+    lines.append(f"- Threads: {summary['total_threads_analyzed']}")
+    lines.append(f"- Assets: {summary['unique_assets_identified']}")
+    lines.append(f"- Assets with questions: {summary['assets_with_questions']}")
     lines.append("")
 
     # Priority Assets
-    lines.append("## Priority Assets for Metadata Curation")
+    lines.append("## Priority Assets")
     lines.append("")
 
-    for asset in analysis['priority_assets']:
-        lines.append(f"### {asset['name']}")
-        lines.append("")
-        lines.append(f"**Asset Type:** {asset['asset_type']}")
-        lines.append(f"**Priority Score:** {asset['priority_score']}/10")
-        lines.append("")
-
-        lines.append("**Demand Signals:**")
-        ds = asset['demand_signals']
-        lines.append(f"- Number of questions: {ds['num_questions']}")
-        lines.append(f"- Unique questioners: {ds['unique_questioners']}")
-        lines.append(f"- Question complexity: {ds['question_complexity']}")
-        lines.append(f"- Question types: {', '.join(ds['common_question_types'])}")
+    for asset_data in analysis['priority_assets']:
+        asset_name = asset_data['asset']
+        lines.append(f"### {asset_name}")
+        lines.append(f"**Score:** {asset_data['priority_score']}/10 | **Questions:** {asset_data['questions']}")
         lines.append("")
 
-        ctx = asset['extracted_context']
-        if any([ctx['description'], ctx['business_context'], ctx['gotchas'],
-                ctx['ownership'], ctx['related_terms']]):
-            lines.append("**Extracted Context:**")
-            if ctx['description']:
-                lines.append(f"- *Description:* {ctx['description']}")
-            if ctx['business_context']:
-                lines.append(f"- *Business Context:* {ctx['business_context'][:200]}...")
-            if ctx['ownership']:
-                lines.append(f"- *Ownership:* {', '.join(ctx['ownership'])}")
-            if ctx['gotchas']:
-                lines.append(f"- *Gotchas/Caveats:* {len(ctx['gotchas'])} noted")
-            if ctx['related_terms']:
-                lines.append(f"- *Related Terms:* {', '.join(ctx['related_terms'][:5])}")
+        # Only show context if present
+        if 'description' in asset_data:
+            lines.append(f"**Description:** {asset_data['description']}")
+            lines.append("")
+        if 'business_context' in asset_data:
+            lines.append(f"**Business Context:** {asset_data['business_context']}")
+            lines.append("")
+        if 'ownership' in asset_data:
+            lines.append(f"**Ownership:** {', '.join(asset_data['ownership'])}")
+            lines.append("")
+        if 'quality_notes' in asset_data:
+            lines.append(f"**Quality Notes:** {len(asset_data['quality_notes'])} noted")
+            lines.append("")
+        if 'related_terms' in asset_data:
+            lines.append(f"**Related Terms:** {', '.join(asset_data['related_terms'][:5])}")
             lines.append("")
 
-        lines.append("**Sample Questions:**")
-        for q in asset['sample_questions']:
-            lines.append(f"> {q[:150]}{'...' if len(q) > 150 else ''}")
-        lines.append("")
         lines.append("---")
         lines.append("")
 
     # Question Type Distribution
-    lines.append("## Pattern Analysis")
-    lines.append("")
-    lines.append("### Question Type Distribution")
+    lines.append("## Question Types")
     lines.append("")
     for q_type, pct in sorted(analysis['question_type_distribution'].items(),
                               key=lambda x: x[1], reverse=True):
         if pct > 0:
-            lines.append(f"- **{q_type}:** {pct}%")
+            lines.append(f"- {q_type}: {pct}%")
     lines.append("")
 
     # Metadata Gaps
-    lines.append("### Identified Metadata Gaps")
+    lines.append("## Metadata Gaps")
     lines.append("")
     for gap in analysis['metadata_gaps']:
-        lines.append(f"#### {gap['gap_type']} (Severity: {gap['severity']})")
-        lines.append(f"{gap['description']}")
-        lines.append(f"- Affected assets: {', '.join(gap['affected_assets'])}")
+        lines.append(f"### {gap['type']}")
+        lines.append(f"Assets: {', '.join(gap['assets'])}")
         lines.append("")
 
     # Agent Recommendations
-    lines.append("## Workflow Agent Opportunities")
+    lines.append("## Agent Recommendations")
     lines.append("")
 
     recs = analysis['agent_recommendations']
 
     if recs['description_agent']:
-        lines.append("### Description Agent Candidates")
-        lines.append("Assets with clear definitions extracted from Slack answers:")
-        lines.append("")
+        lines.append("### Description Agent")
         for item in recs['description_agent'][:5]:
-            lines.append(f"- **{item['asset']}**: \"{item['suggested_description'][:100]}...\"")
+            lines.append(f"- {item['asset']}")
         lines.append("")
 
     if recs['ownership_agent']:
-        lines.append("### Ownership Agent Candidates")
-        lines.append("Assets with identified owners in threads:")
-        lines.append("")
+        lines.append("### Ownership Agent")
         for item in recs['ownership_agent'][:5]:
-            lines.append(f"- **{item['asset']}**: {', '.join(item['identified_owners'])} ({item['confidence']} confidence)")
+            lines.append(f"- {item['asset']}: {', '.join(item['owners'])}")
         lines.append("")
 
     if recs['quality_context_agent']:
-        lines.append("### Quality Context Agent Candidates")
-        lines.append("Assets with quality caveats mentioned:")
-        lines.append("")
+        lines.append("### Quality Context Agent")
         for item in recs['quality_context_agent'][:5]:
-            lines.append(f"- **{item['asset']}**: {len(item['quality_notes'])} quality notes ({item['severity']} severity)")
+            lines.append(f"- {item['asset']}: {len(item['notes'])} notes")
         lines.append("")
 
     if recs['glossary_linkage_agent']:
-        lines.append("### Glossary Linkage Agent Candidates")
-        lines.append("Assets with business terms that should be linked:")
-        lines.append("")
-        for item in sorted(recs['glossary_linkage_agent'],
-                          key=lambda x: x['term_count'], reverse=True)[:5]:
-            lines.append(f"- **{item['asset']}**: {', '.join(item['terms_to_link'][:5])}")
+        lines.append("### Glossary Linkage Agent")
+        for item in recs['glossary_linkage_agent'][:5]:
+            lines.append(f"- {item['asset']}: {', '.join(item['terms'][:3])}")
         lines.append("")
 
     return '\n'.join(lines)
