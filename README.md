@@ -1,19 +1,38 @@
-# Slack Metadata Gap Analyzer for Atlan
+# Atlan Metadata Enrichment Toolkit
 
-A tool that analyzes Slack channel messages to identify patterns in metadata demand, extract contextual information for data assets, and generate actionable recommendations for Atlan's enrichment agents.
+A comprehensive toolkit for enriching your Atlan data catalog with deep contextual metadata from multiple sources.
 
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![Streamlit](https://img.shields.io/badge/streamlit-1.28+-red.svg)
 
 ## Overview
 
-Data teams frequently answer the same questions in Slack about data assets - what tables mean, who owns them, where data comes from, and whether it's reliable. This tribal knowledge represents valuable metadata that should live in your data catalog, not buried in Slack threads.
+This toolkit provides two powerful modules for metadata enrichment:
 
-This analyzer mines those conversations to:
-1. **Identify priority assets** needing metadata curation based on demand signals
-2. **Extract reusable context** from Slack answers (descriptions, ownership, quality notes)
-3. **Surface systemic gaps** in your metadata coverage
-4. **Generate recommendations** for Atlan's enrichment agents
+### 1. Slack Metadata Gap Analyzer
+
+Analyzes Slack conversations to identify patterns in metadata demand and extract tribal knowledge that should live in your data catalog.
+
+**Key Features:**
+- Identify priority assets needing metadata curation
+- Extract reusable context from Slack answers (descriptions, ownership, quality notes)
+- Surface systemic gaps in metadata coverage
+- Generate recommendations for Atlan's enrichment agents
+
+### 2. Tableau Deep Metadata Parser (Phase 1A - NEW!)
+
+Extracts deep contextual metadata from Tableau workbooks (.twb/.twbx) that traditional catalog tools like Atlan often miss.
+
+**Key Features:**
+- Extract calculated field formulas and LOD expressions
+- Parse layout container hierarchies and zone organization
+- Extract filter configurations and dashboard actions
+- Capture Data Stories narratives and annotations
+- JSON-LD compatible output for semantic integration
+
+---
+
+## Module 1: Slack Metadata Gap Analyzer
 
 ## Quick Start
 
@@ -296,6 +315,176 @@ Modify `_calculate_priorities()` to adjust weights for your use case.
 | "Invalid token" | Check SLACK_BOT_TOKEN is set correctly |
 | "No messages found" | Try increasing `--days` or check channel has data questions |
 | Rate limiting | The tool handles this automatically with backoff |
+
+---
+
+## Module 2: Tableau Deep Metadata Parser
+
+A Python library for extracting deep contextual metadata from Tableau workbooks (.twb/.twbx) that traditional catalog tools miss.
+
+### What Makes This Different
+
+Traditional catalog tools like Atlan extract basic metadata from Tableau (table names, field names, data sources). This parser extracts the **contextual metadata** that makes Tableau powerful:
+
+| Traditional Tools | Tableau Deep Parser |
+|------------------|---------------------|
+| Field names | Calculated field formulas |
+| Basic lineage | LOD expression scope & type |
+| Dashboard exists | Layout hierarchy with titles |
+| Filter exists | Filter type, values, conditions |
+| - | Dashboard action configurations |
+| - | Data Story narratives |
+| - | Zone organization |
+
+### Quick Start
+
+```python
+from twb_parser import TableauWorkbookParser
+
+# Initialize parser
+parser = TableauWorkbookParser()
+
+# Parse a workbook (supports both .twb and .twbx)
+metadata = parser.parse_file('workbook.twb')
+
+# Access extracted metadata
+print(f"Workbook: {metadata.workbook_name}")
+print(f"Worksheets: {len(metadata.worksheets)}")
+print(f"Dashboards: {len(metadata.dashboards)}")
+print(f"Stories: {len(metadata.stories)}")
+
+# Export to JSON-LD
+import json
+json_ld = metadata.to_json_ld()
+with open('metadata.json', 'w') as f:
+    json.dump(json_ld, f, indent=2)
+```
+
+### Extracted Metadata
+
+The parser extracts:
+
+1. **Calculated Fields & LOD Expressions**
+   - Formula text
+   - LOD type (FIXED, INCLUDE, EXCLUDE)
+   - Scope fields
+   - Comments and captions
+
+2. **Layout Containers**
+   - Dashboard layout hierarchy
+   - Container types and titles
+   - Position and size information
+   - Nested container relationships
+
+3. **Zone Hierarchies**
+   - Worksheet zone organization
+   - Rows, columns, filters, pages shelves
+   - Marks card organization
+   - Field placement
+
+4. **Filter Configurations**
+   - Filter types (categorical, quantitative, date, relative date)
+   - Filter values and conditions
+   - Global vs local filters
+   - Customization settings
+
+5. **Dashboard Actions**
+   - Action types (filter, highlight, URL, navigation, parameter)
+   - Source and target sheets
+   - Field mappings
+   - URL templates
+
+6. **Data Stories**
+   - Story points with captions
+   - Narrative text and annotations
+   - Worksheet/dashboard references
+   - Sequential ordering
+
+### Usage Examples
+
+See `examples/parse_tableau_workbook.py` for comprehensive examples including:
+- Extracting calculated fields and LOD expressions
+- Navigating layout hierarchies
+- Analyzing dashboard actions
+- Extracting Data Story narratives
+- Exporting to JSON-LD format
+
+Run the example:
+```bash
+python examples/parse_tableau_workbook.py
+```
+
+### Integration with Atlan
+
+The extracted metadata can enrich your Atlan catalog:
+
+```python
+from pyatlan.client.atlan import AtlanClient
+from twb_parser import TableauWorkbookParser
+
+# Parse Tableau workbook
+parser = TableauWorkbookParser()
+metadata = parser.parse_file('workbook.twb')
+
+# Initialize Atlan client
+client = AtlanClient()
+
+# Enrich calculated fields
+for worksheet in metadata.worksheets:
+    for calc_field in worksheet.calculated_fields:
+        # Update Atlan asset with formula and LOD info
+        client.asset.update_custom_metadata(
+            qualified_name=f"{metadata.workbook_name}/{worksheet.name}/{calc_field.name}",
+            attributes={
+                "formula": calc_field.formula,
+                "is_lod": calc_field.is_lod,
+                "lod_type": calc_field.lod_type.value if calc_field.is_lod else None
+            }
+        )
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+python -m pytest tests/twb_parser/
+
+# Run with coverage
+python -m pytest --cov=twb_parser tests/twb_parser/
+
+# Run specific test file
+python -m pytest tests/twb_parser/test_parser.py
+```
+
+### Architecture
+
+```
+twb_parser/
+├── __init__.py           # Main exports
+├── parser.py             # Main parser class
+├── schema.py             # JSON-LD compatible schema
+└── extractors/           # Specialized extractors
+    ├── calc_fields.py    # Calculated fields & LOD
+    ├── layout.py         # Layout containers & zones
+    ├── filters.py        # Filter configurations
+    ├── actions.py        # Dashboard actions
+    └── stories.py        # Data Stories narratives
+```
+
+See `twb_parser/README.md` for detailed documentation.
+
+### Roadmap: Phase 1B (Coming Soon)
+
+The next phase will add **Tableau Metadata API integration** for server-side metadata:
+
+- Description inheritance tracking
+- Quality warnings aggregation
+- Pulse metric definitions
+- Insight Bundles
+- Custom SQL column lineage
+- GraphQL query templates
+
+---
 
 ## License
 

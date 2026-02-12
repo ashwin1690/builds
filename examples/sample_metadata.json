@@ -1,0 +1,233 @@
+{
+  "@context": "https://schema.org/",
+  "@type": "Dataset",
+  "name": "tmpkhmdcoha",
+  "version": "18.1",
+  "dateExtracted": "2026-02-12T00:16:10.259609",
+  "worksheets": [
+    {
+      "name": "Sales by Region",
+      "caption": "Regional Sales Analysis",
+      "calculated_fields": [],
+      "zones": [
+        {
+          "zone_id": "shelf_rows",
+          "zone_name": "rows",
+          "zone_type": "rows",
+          "parent_zone": null,
+          "fields": [
+            "Region",
+            "Sales"
+          ],
+          "position": null
+        },
+        {
+          "zone_id": "shelf_columns",
+          "zone_name": "columns",
+          "zone_type": "columns",
+          "parent_zone": null,
+          "fields": [
+            "Order Date"
+          ],
+          "position": null
+        }
+      ],
+      "filters": [
+        {
+          "filter_id": "Sales_by_Region_Category",
+          "field_name": "Category",
+          "filter_type": "categorical",
+          "worksheet": "Sales by Region",
+          "dashboard": null,
+          "is_global": true,
+          "filter_values": [
+            "Furniture",
+            "Technology"
+          ],
+          "exclude_values": null,
+          "condition": null,
+          "top_n_value": null,
+          "relative_date_period": null,
+          "allow_customization": false,
+          "show_controls": true
+        }
+      ]
+    },
+    {
+      "name": "Sales Details",
+      "caption": "Detailed Sales View",
+      "calculated_fields": [],
+      "zones": [],
+      "filters": []
+    },
+    {
+      "name": "Sales by Region",
+      "caption": null,
+      "calculated_fields": [],
+      "zones": [],
+      "filters": []
+    },
+    {
+      "name": "Sales Details",
+      "caption": null,
+      "calculated_fields": [],
+      "zones": [],
+      "filters": []
+    },
+    {
+      "name": "Sales by Region",
+      "caption": null,
+      "calculated_fields": [],
+      "zones": [],
+      "filters": []
+    }
+  ],
+  "dashboards": [
+    {
+      "name": "Executive Dashboard",
+      "caption": "Executive Summary",
+      "layout_containers": [
+        {
+          "container_id": "1",
+          "container_type": "vertical",
+          "title": "Main Container",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1200,
+            "height": 800
+          },
+          "children": [
+            {
+              "container_id": "2",
+              "container_type": "layout-basic",
+              "title": "Sales by Region",
+              "position": {
+                "x": 0,
+                "y": 0,
+                "width": 1200,
+                "height": 400
+              },
+              "children": [],
+              "zone_name": null,
+              "worksheet_name": "Sales by Region"
+            },
+            {
+              "container_id": "3",
+              "container_type": "layout-basic",
+              "title": "Sales Details",
+              "position": {
+                "x": 0,
+                "y": 400,
+                "width": 1200,
+                "height": 400
+              },
+              "children": [],
+              "zone_name": null,
+              "worksheet_name": "Sales Details"
+            }
+          ],
+          "zone_name": null,
+          "worksheet_name": null
+        }
+      ],
+      "actions": [
+        {
+          "action_id": "Executive_Dashboard_Region_Filter",
+          "action_name": "Region Filter",
+          "action_type": "filter",
+          "source_sheets": [
+            "Sales by Region"
+          ],
+          "target_sheets": [
+            "Sales Details"
+          ],
+          "fields": [
+            "Region"
+          ],
+          "url_template": null,
+          "parameter_name": null,
+          "enabled": true
+        },
+        {
+          "action_id": "Executive_Dashboard_Highlight_Action",
+          "action_name": "Highlight Action",
+          "action_type": "highlight",
+          "source_sheets": [
+            "Sales by Region"
+          ],
+          "target_sheets": [
+            "*"
+          ],
+          "fields": [],
+          "url_template": null,
+          "parameter_name": null,
+          "enabled": true
+        },
+        {
+          "action_id": "Executive_Dashboard_Google_Search",
+          "action_name": "Google Search",
+          "action_type": "url",
+          "source_sheets": [],
+          "target_sheets": [],
+          "fields": [],
+          "url_template": "https://www.google.com/search?q=<Product Name>",
+          "parameter_name": null,
+          "enabled": true
+        }
+      ],
+      "filters": []
+    }
+  ],
+  "stories": [
+    {
+      "story_name": "Q4 Sales Story",
+      "story_id": "Q4_Sales_Story",
+      "description": "Quarterly sales analysis for Q4",
+      "points": [
+        {
+          "point_id": "point_0",
+          "caption": "Overview",
+          "description": null,
+          "order": 0,
+          "worksheet_name": "Sales by Region",
+          "dashboard_name": null,
+          "narrative_text": null
+        },
+        {
+          "point_id": "point_1",
+          "caption": "Key Findings",
+          "description": "Regional breakdown and insights",
+          "order": 1,
+          "worksheet_name": null,
+          "dashboard_name": null,
+          "narrative_text": "Sales increased 25% in Q4, with Technology leading growth."
+        },
+        {
+          "point_id": "point_2",
+          "caption": "Recommendations",
+          "description": null,
+          "order": 2,
+          "worksheet_name": null,
+          "dashboard_name": "Executive Dashboard",
+          "narrative_text": "Focus marketing efforts on high-performing regions."
+        }
+      ]
+    }
+  ],
+  "dataSources": [
+    {
+      "name": "Sample - Superstore",
+      "caption": null,
+      "inline": true
+    }
+  ],
+  "parameters": [
+    {
+      "name": "[Select Region]",
+      "caption": "Region Selector",
+      "datatype": "string",
+      "value": "East"
+    }
+  ]
+}
