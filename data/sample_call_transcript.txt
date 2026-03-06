@@ -1,0 +1,29 @@
+[00:00:30] Sarah Chen: Welcome to the weekly data office hours. Let's start with any questions.
+[00:01:15] Tom Baker: I'm new to the team and found three revenue tables in the warehouse. Which one should I use for my quarterly report?
+[00:01:45] Jessica Wong: Always use finance.revenue_daily_v2. That's our source of truth - it reconciles to the general ledger and includes refunds and adjustments. The old revenue_daily table is deprecated.
+[00:02:10] David Kim: To add to that - revenue_daily was supposed to be removed last quarter but some legacy dashboards still reference it. Please don't build anything new on it.
+[00:02:45] Tom Baker: Got it, thanks. And who owns that table if I have questions later?
+[00:03:00] Jessica Wong: The Finance Data team owns revenue_daily_v2. I'm the primary contact. File a ticket in our Jira board for any data questions.
+[00:03:30] Emma Wilson: Quick question - I'm seeing some weird numbers in the marketing.campaign_attribution table. Conversions seem inflated.
+[00:04:00] Ryan Patel: Yeah there's a known issue where multi-touch attribution double counts some conversions. We're working on a fix. For now, filter on single_touch_attribution = true for accurate numbers.
+[00:04:30] Anna Li: The fix should be in production by next sprint. Ryan's team owns that table. The Marketing Data team is the contact point.
+[00:05:00] Rachel Green: I need to understand where PII flows for our compliance audit. Can someone walk me through it?
+[00:05:30] David Kim: PII is in customers.dim_customer which has email, phone, and address. Also in orders.fct_orders for shipping addresses, and support.tickets for customer emails. All other tables should have hashed identifiers only.
+[00:06:00] Jennifer Lee: We also have pii.customer_raw which is the source for dim_customer. Access is restricted to the CDP team. You'll need manager approval and a ServiceNow request to get access.
+[00:06:30] Rachel Green: Thanks. Is there a classification system for sensitive columns?
+[00:06:45] Jennifer Lee: Not yet in the catalog, but we're working on tagging PII columns in Atlan. For now refer to our internal wiki page.
+[00:07:15] Kevin Harris: What does conversion_type mean in the analytics.events table? I keep seeing values like 1, 2, 3 but can't find docs.
+[00:07:40] Anna Li: This gets asked every week! The values are: 1=signup, 2=trial_start, 3=paid_conversion, 4=upgrade, 5=downgrade, 6=churn. We really need to get this documented in the catalog.
+[00:08:10] James Taylor: On the topic of metrics - what's the official definition of DAU? I've seen different implementations.
+[00:08:35] Sarah Chen: DAU counts users who performed a meaningful action - creating content, purchasing, or spending 5+ minutes in app. Just logging in doesn't count. This is the definition approved by leadership for investor reporting.
+[00:09:00] Jessica Wong: To be specific, the official KPI is in product.user_metrics.dau column. Don't use the active_users column - that's a broader count that includes passive logins.
+[00:09:30] Stephanie Lee: How do I interpret the churn_risk_score in ml.customer_predictions? What's high risk?
+[00:10:00] James Taylor: Score is 0 to 100. Our thresholds: 0-30 is low risk, 31-60 is medium, 61-100 is high risk. The model refreshes weekly and has an AUC of 0.82.
+[00:10:25] Jennifer Lee: The ML Platform team owns that model. They're working on v2 which should improve accuracy. Ping @ml-platform in Slack for questions.
+[00:10:50] Maria Garcia: The customer_360 dashboard - what tables does it pull from? I need to understand the lineage.
+[00:11:15] Lisa Zhang: It pulls from three tables: customers.dim_customer, sales.fct_orders, and marketing.fct_campaigns. Joins on customer_id. Calculated fields include lifetime_value, health_score, and days_since_last_order.
+[00:11:45] David Kim: Note there's about a 2-hour latency on fct_orders data. The dashboard refreshes at 6am UTC daily. The Fivetran sync from Salesforce updates every 15 minutes for the pipeline data.
+[00:12:15] Amy Chen: Is the product.feature_usage table safe for analysis? I heard there might be quality issues.
+[00:12:40] Sarah Chen: It's generally reliable but be careful - there are gaps for mobile events before June 2025. Also about 5% of events are missing user_id from anonymous sessions. Always filter on user_id IS NOT NULL for user-level analysis.
+[00:13:05] Ryan Patel: The Product Analytics team owns that table and they're backfilling the mobile gaps. Should be complete by end of month.
+[00:13:30] Sarah Chen: Great questions everyone. Let's make sure we capture these in the data catalog so we don't keep answering the same things. See you next week!

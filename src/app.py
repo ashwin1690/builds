@@ -31,6 +31,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from slack_client import SlackClient, SlackClientError, test_connection
 from slack_metadata_analyzer import SlackMetadataAnalyzer, format_markdown_report
 from transcript_parser import parse_transcript_file
+from advisory_signals import AdvisorySignalClassifier, format_advisory_report
+from call_intelligence import CallIntelligenceAnalyzer, format_combined_report
 
 
 def print_banner():
@@ -95,6 +97,62 @@ def print_summary(results: dict):
     print(f"  • Ownership Agent: {len(recs.get('ownership_agent', []))} assets with owners identified")
     print(f"  • Quality Context Agent: {len(recs.get('quality_context_agent', []))} assets with caveats")
     print(f"  • Glossary Linkage Agent: {len(recs.get('glossary_linkage_agent', []))} assets with terms")
+
+    print("\n" + "=" * 60)
+
+
+def print_advisory_summary(results: dict):
+    """Print a summary of advisory signal analysis to console."""
+    print("\n" + "=" * 60)
+    print("ADVISORY SIGNALS SUMMARY")
+    print("=" * 60)
+
+    summary = results.get("summary", {})
+    print(f"\n📡 Total advisory signals: {summary.get('total_advisory_signals', 0)}")
+    print(f"📊 Advisory types detected: {summary.get('advisory_types_detected', 0)}")
+    print(f"🔴 High urgency signals: {summary.get('high_urgency_signals', 0)}")
+    print(f"🔁 Repeat question rate: {summary.get('repeat_question_rate', 0)}%")
+
+    # Advisory type breakdown
+    dist = results.get("advisory_type_distribution", {})
+    if dist:
+        print("\n📈 ADVISORY TYPE BREAKDOWN:")
+        print("-" * 40)
+        sorted_types = sorted(dist.items(), key=lambda x: x[1]["count"], reverse=True)
+        for type_name, data in sorted_types:
+            if data["count"] > 0:
+                bar = "█" * int(data["percentage"] / 5)
+                print(f"  {type_name}: {data['count']} ({data['percentage']}%) {bar}")
+
+    # Advisor workload
+    workload = results.get("advisor_workload", [])[:5]
+    if workload:
+        print("\n👥 TOP ADVISORS:")
+        print("-" * 40)
+        for advisor in workload:
+            print(f"  {advisor['advisor']} ({advisor['role']}): "
+                  f"{advisor['signals_handled']} signals - "
+                  f"primarily {advisor['primary_advisory_type']}")
+
+    # Enrichment opportunities
+    opportunities = results.get("enrichment_opportunities", [])
+    high_priority = [o for o in opportunities if o["priority"] == "High"]
+    if high_priority:
+        print("\n🎯 HIGH PRIORITY ENRICHMENT OPPORTUNITIES:")
+        print("-" * 40)
+        for opp in high_priority:
+            print(f"  • {opp['advisory_type']} ({opp['signal_count']} signals, "
+                  f"{opp['repeat_rate']}% repeats)")
+            for action in opp["recommended_actions"][:2]:
+                print(f"    → {action}")
+
+    # High urgency items
+    high_urgency = results.get("high_urgency_signals", [])
+    if high_urgency:
+        print("\n⚠️  HIGH URGENCY SIGNALS:")
+        print("-" * 40)
+        for item in high_urgency[:3]:
+            print(f"  • [{item['advisory_type']}] {item['question'][:100]}")
 
     print("\n" + "=" * 60)
 
@@ -268,6 +326,91 @@ def analyze_transcript(args):
     print_summary(results)
 
 
+def analyze_advisory(args):
+    """Analyze call transcript or messages for advisory signals."""
+    print_banner()
+
+    input_file = args.input
+    output_dir = args.output
+    title = getattr(args, "title", None)
+    mode = getattr(args, "mode", "full")
+
+    is_transcript = input_file.endswith(".txt")
+
+    if is_transcript:
+        print(f"📞 Reading transcript: {os.path.basename(input_file)}")
+    else:
+        print(f"📂 Reading messages: {os.path.basename(input_file)}")
+
+    try:
+        if is_transcript:
+            analyzer = CallIntelligenceAnalyzer.from_transcript(input_file, title)
+        else:
+            analyzer = CallIntelligenceAnalyzer.from_json_file(input_file)
+    except FileNotFoundError:
+        print(f"❌ File not found: {input_file}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error reading input: {e}")
+        sys.exit(1)
+
+    print("\n🔬 Running advisory signal analysis...")
+
+    if mode == "advisory-only":
+        results = analyzer.analyze_advisory_only()
+
+        os.makedirs(output_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # Save JSON
+        json_path = os.path.join(output_dir, f"advisory_signals_{timestamp}.json")
+        with open(json_path, "w") as f:
+            json.dump(results, f, indent=2)
+        print(f"✓ JSON report: {os.path.basename(json_path)}")
+
+        # Save Markdown
+        md_report = format_advisory_report(results)
+        md_path = os.path.join(output_dir, f"advisory_signals_{timestamp}.md")
+        with open(md_path, "w") as f:
+            f.write(md_report)
+        print(f"✓ Markdown report: {os.path.basename(md_path)}")
+
+        print_advisory_summary(results)
+    else:
+        results = analyzer.analyze()
+
+        os.makedirs(output_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # Save JSON
+        json_path = os.path.join(output_dir, f"call_intelligence_{timestamp}.json")
+        with open(json_path, "w") as f:
+            json.dump(results, f, indent=2)
+        print(f"✓ JSON report: {os.path.basename(json_path)}")
+
+        # Save Markdown
+        md_report = format_combined_report(results)
+        md_path = os.path.join(output_dir, f"call_intelligence_{timestamp}.md")
+        with open(md_path, "w") as f:
+            f.write(md_report)
+        print(f"✓ Markdown report: {os.path.basename(md_path)}")
+
+        # Print both summaries
+        print_advisory_summary(results["advisory_signals"])
+        print_summary(results["metadata_analysis"])
+
+        # Print combined insights
+        insights = results.get("combined_insights", {})
+        findings = insights.get("key_findings", [])
+        if findings:
+            print("\n" + "=" * 60)
+            print("COMBINED INSIGHTS")
+            print("=" * 60)
+            for finding in findings:
+                print(f"\n💡 {finding['finding']}")
+                print(f"   {finding['description']}")
+
+
 def cmd_test_connection(args):
     """Test Slack API connection."""
     print_banner()
@@ -363,6 +506,15 @@ Examples:
   # Analyze a call transcript with custom title
   python src/app.py analyze-transcript --input call_notes.txt --title "Team Sync Call"
 
+  # Analyze a call transcript for advisory signals (full report)
+  python src/app.py analyze-advisory --input data/sample_call_transcript.txt
+
+  # Analyze for advisory signals only (without metadata gap analysis)
+  python src/app.py analyze-advisory --input data/sample_call_transcript.txt --mode advisory-only
+
+  # Analyze Slack messages for advisory signals
+  python src/app.py analyze-advisory --input data/sample_slack_messages.json
+
   # Test your Slack connection
   python src/app.py test-connection
 
@@ -443,6 +595,32 @@ Environment Variables:
         help="Title for the transcript (default: filename)"
     )
 
+    # analyze-advisory command
+    advisory_parser = subparsers.add_parser(
+        "analyze-advisory",
+        help="Analyze call transcripts or messages for advisory signals"
+    )
+    advisory_parser.add_argument(
+        "--input", "-i",
+        required=True,
+        help="Path to transcript (.txt) or messages (.json) file"
+    )
+    advisory_parser.add_argument(
+        "--output", "-o",
+        default="./reports",
+        help="Output directory for reports (default: ./reports)"
+    )
+    advisory_parser.add_argument(
+        "--title", "-t",
+        help="Title for the analysis (default: filename)"
+    )
+    advisory_parser.add_argument(
+        "--mode", "-m",
+        choices=["full", "advisory-only"],
+        default="full",
+        help="Analysis mode: 'full' for combined report, 'advisory-only' for signals only (default: full)"
+    )
+
     # test-connection command
     subparsers.add_parser(
         "test-connection",
@@ -457,6 +635,8 @@ Environment Variables:
         analyze_file(args)
     elif args.command == "analyze-transcript":
         analyze_transcript(args)
+    elif args.command == "analyze-advisory":
+        analyze_advisory(args)
     elif args.command == "test-connection":
         cmd_test_connection(args)
     else:

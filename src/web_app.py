@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from slack_client import SlackClient, SlackClientError
 from slack_metadata_analyzer import SlackMetadataAnalyzer, format_markdown_report
+from advisory_signals import AdvisorySignalClassifier, format_advisory_report
 
 
 # Page configuration
@@ -236,11 +237,19 @@ def run_channel_analysis(token: str, channel: str, days: int, limit: int):
         analyzer = SlackMetadataAnalyzer(messages_data)
         results = analyzer.analyze()
 
+        progress_bar.progress(75)
+        status_text.text("📡 Analyzing advisory signals...")
+
+        # Step 4: Run advisory signal analysis
+        advisory_analyzer = AdvisorySignalClassifier(messages_data)
+        advisory_results = advisory_analyzer.analyze()
+
         progress_bar.progress(90)
         status_text.text("📊 Generating reports...")
 
         # Store results in session state
         st.session_state.results = results
+        st.session_state.advisory_results = advisory_results
         st.session_state.messages_data = messages_data
 
         progress_bar.progress(100)
@@ -283,11 +292,19 @@ def run_file_analysis(uploaded_file):
         analyzer = SlackMetadataAnalyzer(messages_data)
         results = analyzer.analyze()
 
+        progress_bar.progress(70)
+        status_text.text("📡 Analyzing advisory signals...")
+
+        # Step 3: Run advisory signal analysis
+        advisory_analyzer = AdvisorySignalClassifier(messages_data)
+        advisory_results = advisory_analyzer.analyze()
+
         progress_bar.progress(90)
         status_text.text("📊 Generating reports...")
 
         # Store results
         st.session_state.results = results
+        st.session_state.advisory_results = advisory_results
         st.session_state.messages_data = messages_data
 
         progress_bar.progress(100)
@@ -334,13 +351,17 @@ def display_results(results: dict):
     st.markdown("---")
 
     # Tabs for different views
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    advisory_results = st.session_state.get("advisory_results")
+
+    tab_names = [
         "🎯 Priority Assets",
         "📈 Question Patterns",
         "⚠️ Metadata Gaps",
         "🤖 Agent Recommendations",
-        "📄 Full Report"
-    ])
+        "📡 Advisory Signals",
+        "📄 Full Report",
+    ]
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(tab_names)
 
     with tab1:
         display_priority_assets(results.get("priority_assets", []))
@@ -355,6 +376,9 @@ def display_results(results: dict):
         display_agent_recommendations(results.get("agent_recommendations", {}))
 
     with tab5:
+        display_advisory_signals(advisory_results)
+
+    with tab6:
         display_full_report(results)
 
 
@@ -481,6 +505,127 @@ def display_agent_recommendations(recommendations: dict):
             for item in sorted(glossary_recs, key=lambda x: x.get("term_count", 0), reverse=True)[:5]:
                 terms = ", ".join(item.get("terms_to_link", [])[:5])
                 st.write(f"- **{item['asset']}**: {terms}")
+
+
+def display_advisory_signals(advisory_results: dict):
+    """Display advisory signal analysis results."""
+    st.markdown("### Call Intelligence: Advisory Signals")
+    st.markdown("What types of advisory are you giving your customers?")
+
+    if not advisory_results:
+        st.info("No advisory signal analysis available. Run an analysis to see results.")
+        return
+
+    summary = advisory_results.get("summary", {})
+
+    # Summary metrics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Advisory Signals", summary.get("total_advisory_signals", 0))
+    with col2:
+        st.metric("Types Detected", summary.get("advisory_types_detected", 0))
+    with col3:
+        st.metric("High Urgency", summary.get("high_urgency_signals", 0))
+    with col4:
+        st.metric("Repeat Rate", f"{summary.get('repeat_question_rate', 0)}%")
+
+    st.markdown("---")
+
+    # Advisory Type Distribution
+    st.markdown("#### Advisory Type Breakdown")
+    dist = advisory_results.get("advisory_type_distribution", {})
+    if dist:
+        import pandas as pd
+
+        data = [
+            (type_name, info["count"], info["percentage"])
+            for type_name, info in dist.items()
+            if info["count"] > 0
+        ]
+        if data:
+            df = pd.DataFrame(data, columns=["Advisory Type", "Count", "Percentage"])
+            df = df.sort_values("Count", ascending=True)
+            st.bar_chart(df.set_index("Advisory Type")["Count"])
+
+    st.markdown("---")
+
+    # Advisory Patterns detail
+    st.markdown("#### Advisory Patterns")
+    for pattern in advisory_results.get("advisory_patterns", []):
+        with st.expander(
+            f"**{pattern['type']}** - {pattern['signal_count']} signals "
+            f"({pattern['repeat_rate']}% repeats)",
+            expanded=pattern["signal_count"] >= 3,
+        ):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("**Top Advisors:**")
+                for advisor in pattern.get("top_advisors", [])[:3]:
+                    st.write(f"- {advisor['name']} ({advisor['count']} signals)")
+
+                st.markdown("**Urgency:**")
+                for level, count in pattern.get("urgency_distribution", {}).items():
+                    icon = {"High": "🔴", "Medium": "🟡", "Low": "🟢"}.get(level, "⚪")
+                    st.write(f"{icon} {level}: {count}")
+
+            with col2:
+                if pattern.get("common_assets"):
+                    st.markdown("**Common Assets:**")
+                    for asset in pattern["common_assets"][:5]:
+                        st.write(f"- `{asset['name']}` ({asset['count']}x)")
+
+            if pattern.get("sample_questions"):
+                st.markdown("**Sample Questions:**")
+                for q in pattern["sample_questions"][:2]:
+                    st.markdown(f"> {q[:200]}")
+
+    st.markdown("---")
+
+    # Advisor Workload
+    workload = advisory_results.get("advisor_workload", [])
+    if workload:
+        st.markdown("#### Advisor Workload Distribution")
+        for advisor in workload[:7]:
+            st.write(
+                f"- **{advisor['advisor']}** ({advisor['role']}): "
+                f"{advisor['signals_handled']} signals | "
+                f"Primary: {advisor['primary_advisory_type']}"
+            )
+
+    st.markdown("---")
+
+    # Enrichment Opportunities
+    opportunities = advisory_results.get("enrichment_opportunities", [])
+    if opportunities:
+        st.markdown("#### Catalog Enrichment Opportunities")
+        for opp in opportunities:
+            priority_color = {
+                "High": "🔴",
+                "Medium": "🟡",
+                "Low": "🟢",
+            }.get(opp["priority"], "⚪")
+
+            with st.expander(
+                f"{priority_color} **[{opp['priority']}] {opp['advisory_type']}** - "
+                f"{opp['signal_count']} signals",
+                expanded=opp["priority"] == "High",
+            ):
+                if opp.get("affected_assets"):
+                    st.write(f"**Assets:** {', '.join(f'`{a}`' for a in opp['affected_assets'])}")
+                st.markdown("**Recommended Actions:**")
+                for action in opp["recommended_actions"]:
+                    st.write(f"- {action}")
+
+    # Advisory report download
+    st.markdown("---")
+    advisory_md = format_advisory_report(advisory_results)
+    st.download_button(
+        label="📥 Download Advisory Signals Report",
+        data=advisory_md,
+        file_name=f"advisory_signals_{datetime.now().strftime('%Y%m%d')}.md",
+        mime="text/markdown",
+    )
 
 
 def display_full_report(results: dict):
