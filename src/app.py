@@ -33,6 +33,7 @@ from slack_metadata_analyzer import SlackMetadataAnalyzer, format_markdown_repor
 from transcript_parser import parse_transcript_file
 from advisory_signals import AdvisorySignalClassifier, format_advisory_report
 from call_intelligence import CallIntelligenceAnalyzer, format_combined_report
+from enriched_call_intelligence import EnrichedCallIntelligenceAnalyzer, format_enriched_report
 
 
 def print_banner():
@@ -411,6 +412,116 @@ def analyze_advisory(args):
                 print(f"   {finding['description']}")
 
 
+def analyze_enriched(args):
+    """Analyze with full enriched call intelligence (Gong, Atlan, Salesforce, Tableau)."""
+    print_banner()
+
+    input_file = args.input
+    output_dir = args.output
+    title = getattr(args, "title", None)
+
+    is_transcript = input_file.endswith(".txt")
+
+    if is_transcript:
+        print(f"📞 Reading transcript: {os.path.basename(input_file)}")
+    else:
+        print(f"📂 Reading messages: {os.path.basename(input_file)}")
+
+    try:
+        kwargs = {}
+
+        # Tableau workbook paths
+        if hasattr(args, "tableau_workbooks") and args.tableau_workbooks:
+            kwargs["tableau_workbook_paths"] = args.tableau_workbooks
+
+        # Trend history
+        if hasattr(args, "trend_history") and args.trend_history:
+            kwargs["trend_history_path"] = args.trend_history
+
+        if is_transcript:
+            analyzer = EnrichedCallIntelligenceAnalyzer.from_transcript(
+                input_file, title, **kwargs
+            )
+        else:
+            analyzer = EnrichedCallIntelligenceAnalyzer.from_json_file(
+                input_file, **kwargs
+            )
+    except FileNotFoundError:
+        print(f"❌ File not found: {input_file}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error reading input: {e}")
+        sys.exit(1)
+
+    print("\n🔬 Running enriched call intelligence analysis...")
+
+    # Show which enrichers are active
+    for enricher in analyzer._enrichers:
+        print(f"  ✓ {enricher.__class__.__name__}: ACTIVE")
+    if not analyzer._enrichers:
+        print("  ℹ No external enrichers configured (standalone mode)")
+
+    results = analyzer.analyze(include_base_analysis=not getattr(args, "no_base", False))
+
+    # Save results
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Save JSON
+    json_path = os.path.join(output_dir, f"enriched_intelligence_{timestamp}.json")
+    with open(json_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"✓ JSON report: {os.path.basename(json_path)}")
+
+    # Save Markdown
+    md_report = format_enriched_report(results)
+    md_path = os.path.join(output_dir, f"enriched_intelligence_{timestamp}.md")
+    with open(md_path, "w") as f:
+        f.write(md_report)
+    print(f"✓ Markdown report: {os.path.basename(md_path)}")
+
+    # Print enriched summary
+    print("\n" + "=" * 60)
+    print("ENRICHED INTELLIGENCE SUMMARY")
+    print("=" * 60)
+
+    summary = results.get("summary", {})
+    print(f"\n📡 Total signals: {summary.get('total_signals', 0)}")
+    print(f"📊 Avg composite priority: {summary.get('avg_composite_priority', 0):.4f}")
+    print(f"🎯 Avg confidence: {summary.get('avg_confidence', 0):.3f}")
+    print(f"🏢 Catalog validated: {summary.get('signals_with_catalog_validation', 0)}")
+    print(f"💰 Business impact scored: {summary.get('signals_with_business_impact', 0)}")
+    print(f"📞 Gong enriched: {summary.get('signals_with_gong_context', 0)}")
+    print(f"📊 Tableau enriched: {summary.get('signals_with_tableau_context', 0)}")
+
+    # Gong intelligence
+    gong_intel = results.get("gong_intelligence")
+    if gong_intel:
+        print(f"\n🎙️  GONG CALL INTELLIGENCE:")
+        print(f"   Calls analyzed: {gong_intel['calls_analyzed']}")
+        print(f"   Asset mentions: {gong_intel['total_asset_mentions']}")
+        print(f"   Deals: {', '.join(gong_intel['deals_referenced'][:3])}")
+
+    # Asset hotspots
+    hotspots = results.get("asset_hotspots", [])[:5]
+    if hotspots:
+        print("\n🔥 TOP ASSET HOTSPOTS:")
+        print("-" * 40)
+        for h in hotspots:
+            print(f"  {h['asset']}: priority={h['total_priority']:.3f}, "
+                  f"signals={h['signal_count']}, types={', '.join(h['advisory_types'])}")
+
+    # Emerging issues
+    emerging = results.get("emerging_issues", [])
+    if emerging:
+        print("\n⚡ EMERGING ISSUES:")
+        print("-" * 40)
+        for issue in emerging:
+            print(f"  [{issue['severity']}] {issue['description']}")
+
+    print("\n" + "=" * 60)
+
+
 def cmd_test_connection(args):
     """Test Slack API connection."""
     print_banner()
@@ -621,6 +732,40 @@ Environment Variables:
         help="Analysis mode: 'full' for combined report, 'advisory-only' for signals only (default: full)"
     )
 
+    # analyze-enriched command
+    enriched_parser = subparsers.add_parser(
+        "analyze-enriched",
+        help="Run enriched call intelligence with Gong, Atlan, Salesforce, and Tableau"
+    )
+    enriched_parser.add_argument(
+        "--input", "-i",
+        required=True,
+        help="Path to transcript (.txt) or messages (.json) file"
+    )
+    enriched_parser.add_argument(
+        "--output", "-o",
+        default="./reports",
+        help="Output directory for reports (default: ./reports)"
+    )
+    enriched_parser.add_argument(
+        "--title", "-t",
+        help="Title for the analysis"
+    )
+    enriched_parser.add_argument(
+        "--tableau-workbooks",
+        nargs="*",
+        help="Paths to .twb/.twbx files for Tableau lineage enrichment"
+    )
+    enriched_parser.add_argument(
+        "--trend-history",
+        help="Path to trend history JSON file for tracking changes over time"
+    )
+    enriched_parser.add_argument(
+        "--no-base",
+        action="store_true",
+        help="Skip base metadata gap analysis (enriched signals only)"
+    )
+
     # test-connection command
     subparsers.add_parser(
         "test-connection",
@@ -637,6 +782,8 @@ Environment Variables:
         analyze_transcript(args)
     elif args.command == "analyze-advisory":
         analyze_advisory(args)
+    elif args.command == "analyze-enriched":
+        analyze_enriched(args)
     elif args.command == "test-connection":
         cmd_test_connection(args)
     else:

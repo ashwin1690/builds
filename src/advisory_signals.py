@@ -57,6 +57,9 @@ class AdvisorySignal:
     assets_referenced: list = field(default_factory=list)
     is_repeat_question: bool = False
     actionable_insight: str = ""
+    confidence: float = 0.0  # 0.0-1.0 classification confidence
+    keyword_hits: int = 0
+    pattern_hits: int = 0
 
 
 @dataclass
@@ -256,7 +259,9 @@ class AdvisorySignalClassifier:
             full_response = " ".join(response_texts)
 
             # Classify advisory type from the responses
-            advisory_type = self._classify_advisory_type(full_response, question)
+            advisory_type, confidence, kw_hits, pat_hits = self._classify_advisory_type(
+                full_response, question
+            )
 
             # Determine urgency
             urgency = self._assess_urgency(question, full_response)
@@ -291,38 +296,61 @@ class AdvisorySignalClassifier:
                 assets_referenced=assets,
                 is_repeat_question=is_repeat,
                 actionable_insight=insight,
+                confidence=confidence,
+                keyword_hits=kw_hits,
+                pattern_hits=pat_hits,
             )
             self.signals.append(signal)
 
-    def _classify_advisory_type(self, response: str, question: str) -> AdvisoryType:
-        """Classify the type of advisory from the response content."""
+    def _classify_advisory_type(self, response: str, question: str) -> tuple:
+        """
+        Classify the type of advisory from the response content.
+
+        Returns:
+            Tuple of (AdvisoryType, confidence: float, keyword_hits: int, pattern_hits: int)
+        """
         response_lower = response.lower()
         question_lower = question.lower()
         combined = response_lower + " " + question_lower
 
         scores: dict[AdvisoryType, float] = {}
+        hit_details: dict[AdvisoryType, tuple] = {}
 
         for advisory_type, config in ADVISORY_RESPONSE_PATTERNS.items():
             score = 0.0
+            kw_hits = 0
+            pat_hits = 0
 
             # Keyword matching (weighted by relevance)
             for keyword in config["keywords"]:
                 if keyword in response_lower:
                     score += 1.5  # Responses weighted higher
+                    kw_hits += 1
                 if keyword in question_lower:
                     score += 0.5
+                    kw_hits += 1
 
             # Regex pattern matching
             for pattern in config["patterns"]:
                 if re.search(pattern, combined, re.IGNORECASE):
                     score += 2.0
+                    pat_hits += 1
 
             scores[advisory_type] = score
+            hit_details[advisory_type] = (kw_hits, pat_hits)
 
         best_match = max(scores, key=scores.get)
-        if scores[best_match] > 0:
-            return best_match
-        return AdvisoryType.UNKNOWN
+        best_score = scores[best_match]
+
+        if best_score > 0:
+            # Compute confidence: score relative to theoretical max for this type
+            config = ADVISORY_RESPONSE_PATTERNS[best_match]
+            max_possible = len(config["keywords"]) * 2.0 + len(config["patterns"]) * 2.0
+            confidence = min(best_score / max_possible, 1.0) if max_possible > 0 else 0.0
+            kw_hits, pat_hits = hit_details[best_match]
+            return best_match, round(confidence, 3), kw_hits, pat_hits
+
+        return AdvisoryType.UNKNOWN, 0.0, 0, 0
 
     def _assess_urgency(self, question: str, response: str) -> AdvisoryUrgency:
         """Assess the urgency level of the advisory signal."""

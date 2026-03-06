@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from slack_client import SlackClient, SlackClientError
 from slack_metadata_analyzer import SlackMetadataAnalyzer, format_markdown_report
 from advisory_signals import AdvisorySignalClassifier, format_advisory_report
+from enriched_call_intelligence import EnrichedCallIntelligenceAnalyzer, format_enriched_report
 
 
 # Page configuration
@@ -244,12 +245,20 @@ def run_channel_analysis(token: str, channel: str, days: int, limit: int):
         advisory_analyzer = AdvisorySignalClassifier(messages_data)
         advisory_results = advisory_analyzer.analyze()
 
-        progress_bar.progress(90)
+        progress_bar.progress(85)
+        status_text.text("🧠 Running enriched intelligence analysis...")
+
+        # Step 5: Run enriched call intelligence
+        enriched_analyzer = EnrichedCallIntelligenceAnalyzer(messages_data)
+        enriched_results = enriched_analyzer.analyze(include_base_analysis=False)
+
+        progress_bar.progress(95)
         status_text.text("📊 Generating reports...")
 
         # Store results in session state
         st.session_state.results = results
         st.session_state.advisory_results = advisory_results
+        st.session_state.enriched_results = enriched_results
         st.session_state.messages_data = messages_data
 
         progress_bar.progress(100)
@@ -299,12 +308,20 @@ def run_file_analysis(uploaded_file):
         advisory_analyzer = AdvisorySignalClassifier(messages_data)
         advisory_results = advisory_analyzer.analyze()
 
-        progress_bar.progress(90)
+        progress_bar.progress(85)
+        status_text.text("🧠 Running enriched intelligence analysis...")
+
+        # Step 4: Run enriched call intelligence
+        enriched_analyzer = EnrichedCallIntelligenceAnalyzer(messages_data)
+        enriched_results = enriched_analyzer.analyze(include_base_analysis=False)
+
+        progress_bar.progress(95)
         status_text.text("📊 Generating reports...")
 
         # Store results
         st.session_state.results = results
         st.session_state.advisory_results = advisory_results
+        st.session_state.enriched_results = enriched_results
         st.session_state.messages_data = messages_data
 
         progress_bar.progress(100)
@@ -353,15 +370,19 @@ def display_results(results: dict):
     # Tabs for different views
     advisory_results = st.session_state.get("advisory_results")
 
+    enriched_results = st.session_state.get("enriched_results")
+
     tab_names = [
         "🎯 Priority Assets",
         "📈 Question Patterns",
         "⚠️ Metadata Gaps",
         "🤖 Agent Recommendations",
         "📡 Advisory Signals",
+        "🧠 Enriched Intelligence",
+        "🔥 Asset Hotspots",
         "📄 Full Report",
     ]
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(tab_names)
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(tab_names)
 
     with tab1:
         display_priority_assets(results.get("priority_assets", []))
@@ -379,6 +400,12 @@ def display_results(results: dict):
         display_advisory_signals(advisory_results)
 
     with tab6:
+        display_enriched_intelligence(enriched_results)
+
+    with tab7:
+        display_asset_hotspots(enriched_results)
+
+    with tab8:
         display_full_report(results)
 
 
@@ -626,6 +653,201 @@ def display_advisory_signals(advisory_results: dict):
         file_name=f"advisory_signals_{datetime.now().strftime('%Y%m%d')}.md",
         mime="text/markdown",
     )
+
+
+def display_enriched_intelligence(enriched_results: dict):
+    """Display enriched call intelligence analysis."""
+    st.markdown("### Enriched Call Intelligence")
+    st.markdown("Advisory signals enriched with Gong, Atlan, Salesforce, and Tableau context.")
+
+    if not enriched_results:
+        st.info("No enriched analysis available. Run an analysis to see results.")
+        return
+
+    summary = enriched_results.get("summary", {})
+
+    # Summary metrics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Signals", summary.get("total_signals", 0))
+    with col2:
+        st.metric("Avg Priority", f"{summary.get('avg_composite_priority', 0):.3f}")
+    with col3:
+        st.metric("Avg Confidence", f"{summary.get('avg_confidence', 0):.2f}")
+    with col4:
+        enricher_count = len(enriched_results.get("active_enrichers", []))
+        st.metric("Active Enrichers", enricher_count)
+
+    st.markdown("---")
+
+    # Enrichment coverage
+    st.markdown("#### Enrichment Coverage")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Catalog Validated", summary.get("signals_with_catalog_validation", 0))
+    with col2:
+        st.metric("Business Impact", summary.get("signals_with_business_impact", 0))
+    with col3:
+        st.metric("Gong Context", summary.get("signals_with_gong_context", 0))
+    with col4:
+        st.metric("Tableau Context", summary.get("signals_with_tableau_context", 0))
+
+    st.markdown("---")
+
+    # Gong Intelligence
+    gong_intel = enriched_results.get("gong_intelligence")
+    if gong_intel:
+        st.markdown("#### Gong Call Intelligence")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Calls Analyzed", gong_intel.get("calls_analyzed", 0))
+        with col2:
+            st.metric("Asset Mentions", gong_intel.get("total_asset_mentions", 0))
+        with col3:
+            st.metric("Deals Referenced", len(gong_intel.get("deals_referenced", [])))
+
+        if gong_intel.get("deals_referenced"):
+            st.write(f"**Deals:** {', '.join(gong_intel['deals_referenced'][:10])}")
+        st.markdown("---")
+
+    # Top Priority Signals
+    st.markdown("#### Top Priority Signals")
+    for i, signal in enumerate(enriched_results.get("top_signals", [])[:10], 1):
+        confidence = signal.get("confidence", {})
+        priority = signal.get("composite_priority", 0)
+
+        # Color-code by priority
+        if priority >= 0.7:
+            priority_color = "🔴"
+        elif priority >= 0.4:
+            priority_color = "🟡"
+        else:
+            priority_color = "🟢"
+
+        with st.expander(
+            f"{priority_color} **#{i} [{signal['advisory_type']}]** "
+            f"Priority: {priority:.3f} | Confidence: {confidence.get('label', 'N/A')}",
+            expanded=i <= 3,
+        ):
+            st.write(f"**Question:** {signal['question'][:300]}")
+
+            if signal.get("assets_referenced"):
+                st.write(f"**Assets:** {', '.join(f'`{a}`' for a in signal['assets_referenced'])}")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if signal.get("gong_context"):
+                    gc = signal["gong_context"]
+                    st.markdown("**Gong Context:**")
+                    st.write(f"- Calls: {gc['call_count']}")
+                    st.write(f"- Mentions: {gc['mention_count']}")
+                    st.write(f"- Sentiment: {gc['avg_sentiment']:.2f}")
+                    if gc.get("deal_names"):
+                        st.write(f"- Deals: {', '.join(gc['deal_names'][:3])}")
+
+                if signal.get("catalog_validation"):
+                    cv = signal["catalog_validation"]
+                    st.markdown("**Atlan Catalog:**")
+                    st.write(f"- Exists: {'Yes' if cv['asset_exists'] else 'No'}")
+                    st.write(f"- Description: {'Yes' if cv['has_description'] else 'Missing'}")
+                    st.write(f"- Owner: {'Yes' if cv['has_owner'] else 'Missing'}")
+                    st.write(f"- Completeness: {cv['completeness']:.0%}")
+
+            with col2:
+                if signal.get("business_impact"):
+                    bi = signal["business_impact"]
+                    st.markdown("**Business Impact:**")
+                    st.write(f"- Score: {bi['score']:.1f} ({bi['label']})")
+                    st.write(f"- Pipeline: ${bi['total_opportunity_value']:,.0f}")
+                    st.write(f"- Opportunities: {bi['opportunity_count']}")
+                    if bi.get("accounts"):
+                        st.write(f"- Accounts: {', '.join(bi['accounts'][:3])}")
+
+                if signal.get("tableau_context"):
+                    tc = signal["tableau_context"]
+                    st.markdown("**Tableau Context:**")
+                    if tc.get("dashboards"):
+                        st.write(f"- Dashboards: {', '.join(tc['dashboards'][:3])}")
+                    if tc.get("answering_calc_fields"):
+                        st.write(f"- Calc fields: {len(tc['answering_calc_fields'])}")
+                    if tc.get("has_existing_definition"):
+                        st.write("- **Definition exists in Tableau**")
+
+    # Emerging Issues
+    emerging = enriched_results.get("emerging_issues", [])
+    if emerging:
+        st.markdown("---")
+        st.markdown("#### Emerging Issues")
+        for issue in emerging:
+            severity_icon = {"High": "🔴", "Medium": "🟡", "Low": "🟢"}.get(
+                issue["severity"], "⚪"
+            )
+            st.write(f"{severity_icon} **[{issue['severity']}]** {issue['description']}")
+
+    # Type Priority Breakdown
+    st.markdown("---")
+    st.markdown("#### Advisory Type Priority Breakdown")
+    type_data = enriched_results.get("type_priority_breakdown", {})
+    if type_data:
+        import pandas as pd
+        rows = [
+            {"Type": t, "Count": d["count"], "Avg Priority": d["avg_priority"]}
+            for t, d in type_data.items()
+        ]
+        df = pd.DataFrame(rows).sort_values("Avg Priority", ascending=False)
+        st.dataframe(df, use_container_width=True)
+
+    # Download enriched report
+    st.markdown("---")
+    enriched_md = format_enriched_report(enriched_results)
+    st.download_button(
+        label="📥 Download Enriched Intelligence Report",
+        data=enriched_md,
+        file_name=f"enriched_intelligence_{datetime.now().strftime('%Y%m%d')}.md",
+        mime="text/markdown",
+    )
+
+
+def display_asset_hotspots(enriched_results: dict):
+    """Display asset hotspot analysis from enriched intelligence."""
+    st.markdown("### Asset Hotspots")
+    st.markdown("Assets ranked by combined advisory signal priority across all enrichment sources.")
+
+    if not enriched_results:
+        st.info("No enriched analysis available. Run an analysis to see results.")
+        return
+
+    hotspots = enriched_results.get("asset_hotspots", [])
+    if not hotspots:
+        st.info("No asset hotspots identified.")
+        return
+
+    for hotspot in hotspots[:15]:
+        indicators = []
+        if hotspot.get("in_atlan"):
+            indicators.append("Atlan")
+        if hotspot.get("in_gong_calls"):
+            indicators.append("Gong")
+        if hotspot.get("pipeline_value", 0) > 0:
+            indicators.append(f"${hotspot['pipeline_value']:,.0f}")
+
+        indicator_badges = " | ".join(indicators) if indicators else "No external context"
+
+        with st.expander(
+            f"**`{hotspot['asset']}`** - Priority: {hotspot['total_priority']:.3f} | "
+            f"Signals: {hotspot['signal_count']}",
+            expanded=hotspot["total_priority"] > 0.5,
+        ):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Total Priority:** {hotspot['total_priority']:.3f}")
+                st.write(f"**Signal Count:** {hotspot['signal_count']}")
+                st.write(f"**Advisory Types:** {', '.join(hotspot['advisory_types'])}")
+            with col2:
+                st.write(f"**Enrichment Sources:** {indicator_badges}")
+                if hotspot.get("pipeline_value", 0) > 0:
+                    st.write(f"**Pipeline Value:** ${hotspot['pipeline_value']:,.0f}")
 
 
 def display_full_report(results: dict):
